@@ -70,6 +70,6 @@ describe("BC24", function () {
 
   Future: 
     - role based tests
-    - upgrade
+    - upgrading the contract? 
   */
 });
