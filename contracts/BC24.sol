@@ -8,20 +8,38 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155Burn
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
+import "./SupplyChainData.sol";
+
 /// @custom:security-contact Hugo.albert.marques@gmail.com
-contract BC24 is Initializable, ERC1155Upgradeable, AccessControlUpgradeable, ERC1155BurnableUpgradeable, UUPSUpgradeable {
+contract BC24 is
+    Initializable,
+    ERC1155Upgradeable,
+    AccessControlUpgradeable,
+    ERC1155BurnableUpgradeable,
+    UUPSUpgradeable,
+    SupplyChainData
+{
     bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    bytes32 public constant TOKEN_OWNER_ROLE = keccak256("TOKEN_OWNER_ROLE");
+
+    uint256 private _nextTokenId;
+
+    //emits an event when a new token is created
+    event NFTMinted(uint256 indexed _id);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin, address minter, address upgrader)
-        initializer public
-    {
+    function initialize(
+        address defaultAdmin,
+        address minter,
+        address upgrader,
+        address tokenOwner
+    ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
@@ -30,35 +48,91 @@ contract BC24 is Initializable, ERC1155Upgradeable, AccessControlUpgradeable, ER
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(MINTER_ROLE, minter);
         _grantRole(UPGRADER_ROLE, upgrader);
+        _grantRole(TOKEN_OWNER_ROLE, tokenOwner);
     }
 
-    function setURI(string memory newuri) public onlyRole(URI_SETTER_ROLE) {
-        _setURI(newuri);
+    /* Not directly needed at the moment since we need to define it.  */
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(
+            hasRole(TOKEN_OWNER_ROLE, msg.sender),
+            "Caller is not the token owner"
+        );
+        _;
     }
 
-    function mint(address account, uint256 id, uint256 amount, bytes memory data)
-        public
-        onlyRole(MINTER_ROLE)
-    {
-        _mint(account, id, amount, data);
+    function createToken(
+        address account
+    ) public onlyRole(MINTER_ROLE) returns (uint256) {
+        uint256 tokenId = _nextTokenId;
+        _mint(account, tokenId, 1, "");
+        _nextTokenId++;
+        emit NFTMinted(tokenId);
+        return tokenId;
     }
 
-    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
-        public
-        onlyRole(MINTER_ROLE)
-    {
-        _mintBatch(to, ids, amounts, data);
+    /* Adding Metadata stuff */
+    function addBreedingInfo(
+        uint256 _tokenId /* For now only default... add at your leasure */
+    ) public returns (string memory) {
+        SupplyChainData.setBreederInfo(
+            _tokenId,
+            "Zurich",
+            "male",
+            500,
+            "healthy",
+            block.timestamp
+        );
+
+        return "Breeding info added successfully.";
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        onlyRole(UPGRADER_ROLE)
-        override
-    {}
+    function addRenderingPlantInfo(
+        uint256 _tokenId /* For now only default... add at your leasure */
+    ) public returns (string memory) {
+        SupplyChainData.setRenderingPlantInfo(
+            _tokenId,
+            "Switzerland",
+            123456,
+            block.timestamp
+        );
 
-    // The following functions are overrides required by Solidity.
+        return "Rendering plant info added successfully.";
+    }
 
-    function supportsInterface(bytes4 interfaceId)
+    function getMetaData(
+        uint256 _tokenId
+    ) public view returns (MetaData memory) {
+        return SupplyChainData.getSupplyChainData(_tokenId);
+    }
+
+    /* Destroys a Token and its associated Metadata */
+    function destroyToken(
+        address account,
+        uint256 _tokenId,
+        uint256 amount
+    ) public returns (string memory) {
+        require(
+            balanceOf(account, _tokenId) >= amount,
+            "There is no such token to destroy."
+        );
+        _burn(account, _tokenId, amount);
+        SupplyChainData.deleteSupplyChainData(_tokenId);
+        return "Token has been successfully destroyed";
+    }
+
+    /* Function to get the current amount of tokens around. Needed for testing */
+    function getTokenIndex() public view returns (uint256) {
+        return _nextTokenId;
+    }
+
+    /* Automatically created solidity functions */
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
+
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         override(ERC1155Upgradeable, AccessControlUpgradeable)
