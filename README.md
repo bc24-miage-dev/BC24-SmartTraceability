@@ -35,8 +35,8 @@ npx hardhat console --network localhost
 Create Token: 
 ```
 const BC24 = await ethers.getContractFactory("BC24");
-const bc = await BC24.attach("0x8A791620dd6260079BF849Dc5567aDC3F2FdC318");
-await bc.createToken("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",'{"placeOfOrigin":"Zurich", "gender":"male", "weight":300, "healthInformation":"healthy", "creationDate":"01-01-2024"}')
+const bc = await BC24.attach("0x...");
+
 ```
 This will give you a tokenid
 

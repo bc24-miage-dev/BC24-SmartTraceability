@@ -9,19 +9,36 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
-contract BC24 is Initializable, ERC1155Upgradeable, AccessControlUpgradeable, ERC1155BurnableUpgradeable, UUPSUpgradeable {
+contract BC24 is
+    Initializable,
+    ERC1155Upgradeable,
+    AccessControlUpgradeable,
+    ERC1155BurnableUpgradeable,
+    UUPSUpgradeable
+{
     bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
+    struct TokenMetadata {
+        string jsonString; // JSON-like metadata
+    }
+
+    uint256 private _nextTokenId;
+
+    mapping(uint256 => TokenMetadata) private _tokenMetadata;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
+        _nextTokenId = 1; // Initialize the next token ID to 1
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin, address minter, address upgrader)
-        initializer public
-    {
+    function initialize(
+        address defaultAdmin,
+        address minter,
+        address upgrader
+    ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
@@ -32,33 +49,55 @@ contract BC24 is Initializable, ERC1155Upgradeable, AccessControlUpgradeable, ER
         _grantRole(UPGRADER_ROLE, upgrader);
     }
 
-    function setURI(string memory newuri) public onlyRole(URI_SETTER_ROLE) {
-        _setURI(newuri);
+    function createToken(
+        address account,
+        string memory jsonData
+    ) public onlyRole(MINTER_ROLE) returns (uint256) {
+        uint256 tokenId = _nextTokenId;
+        _tokenMetadata[tokenId] = TokenMetadata(jsonData);
+        _mint(account, tokenId, 1, "");
+        _nextTokenId++;
+        return tokenId;
     }
 
-    function mint(address account, uint256 id, uint256 amount, bytes memory data)
-        public
-        onlyRole(MINTER_ROLE)
-    {
-        _mint(account, id, amount, data);
+    function destroyToken(
+        address account,
+        uint256 tokenId,
+        uint256 amount
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) returns (string memory) {
+        require(
+            balanceOf(account, tokenId) >= amount,
+            "There is no such token to destroy."
+        );
+        _burn(account, tokenId, amount);
+        delete _tokenMetadata[tokenId];
+        return "Token has been successfully destroyed";
     }
 
-    function mintBatch(address to, uint256[] memory ids, uint256[] memory amounts, bytes memory data)
-        public
-        onlyRole(MINTER_ROLE)
-    {
-        _mintBatch(to, ids, amounts, data);
+    function getMetadata(
+        uint256 tokenId
+    ) external view returns (string memory) {
+        TokenMetadata memory metadata = _tokenMetadata[tokenId];
+        return metadata.jsonString;
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        onlyRole(UPGRADER_ROLE)
-        override
-    {}
+    function setMetadata(
+        uint256 tokenId,
+        string memory jsonString
+    ) public returns (string memory) {
+        _tokenMetadata[tokenId] = TokenMetadata(jsonString);
+        return "Metadata has been successfully set";
+    }
 
-    // The following functions are overrides required by Solidity.
+    // solidity functions
 
-    function supportsInterface(bytes4 interfaceId)
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyRole(UPGRADER_ROLE) {}
+
+    function supportsInterface(
+        bytes4 interfaceId
+    )
         public
         view
         override(ERC1155Upgradeable, AccessControlUpgradeable)
