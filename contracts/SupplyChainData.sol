@@ -79,12 +79,16 @@ abstract contract SupplyChainData {
             renderingPlant.creationDate = block.timestamp;
         }
 
-        renderingPlant.countryOfSlaughter = countryOfSlaughter;
-        renderingPlant.slaughterhouseAccreditationNumber = slaughterhouseAccreditationNumber;
-        renderingPlant.slaughterDate = slaughterDate;
-
         uint256 lastUpdateDate = block.timestamp;
-        renderingPlant.lastUpdateDate = lastUpdateDate;
+
+        _tokenMetadata[tokenId].renderingPlant = RenderingPlantInfo({
+            countryOfSlaughter: countryOfSlaughter,
+            slaughterhouseAccreditationNumber: slaughterhouseAccreditationNumber,
+            slaughterDate: slaughterDate,
+            creationDate: renderingPlant.creationDate,
+            lastUpdateDate: lastUpdateDate
+        });
+       
         _tokenMetadata[tokenId].lastUpdateDate = lastUpdateDate;
     }
 
