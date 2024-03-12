@@ -3,122 +3,99 @@ pragma solidity ^0.8.20;
 abstract contract SupplyChainData {
     // Struct for Breeder
     struct BreederInfo {
+        string typeOfAnimal;
         string placeOfOrigin;
         string gender;
         uint256 weight;
         string healthInformation;
         uint256 creationDate;
-        // mapping(uint256 => uint256) foodConsumption; // Map day number to food consumed
+        uint256 lastUpdateDate;
     }
 
     struct RenderingPlantInfo {
         string countryOfSlaughter;
         uint256 slaughterhouseAccreditationNumber;
         uint256 slaughterDate;
+        uint256 creationDate;
+        uint256 lastUpdateDate;
     }
 
     struct MetaData {
         BreederInfo breeder;
-        RenderingPlantInfo renderingPlant;
-        /*CarrierInfo carrier;
-        FactoryInfo factory; */
+        RenderingPlantInfo renderingPlant;  
+        uint256 creationDate;
+        uint256 lastUpdateDate;
     }
 
     mapping(uint256 => MetaData) _tokenMetadata;
-
+    
+    function createMetaData(uint256 tokenId) internal {
+        MetaData storage metaData = _tokenMetadata[tokenId];
+        metaData.creationDate = block.timestamp;
+    }
+    
     function setBreederInfo(
-        uint256 _tokenId,
-        string memory _placeOfOrigin,
-        string memory _gender,
-        uint256 _weight,
-        string memory _healthInformation,
-        uint256 _creationDate
-    ) public {
-        _tokenMetadata[_tokenId].breeder = BreederInfo({
-            placeOfOrigin: _placeOfOrigin,
-            gender: _gender,
-            weight: _weight,
-            healthInformation: _healthInformation,
-            creationDate: _creationDate
+        uint256 tokenId,
+        string memory typeOfAnimal,
+        string memory placeOfOrigin,
+        string memory gender,
+        uint256 weight,
+        string memory healthInformation
+    ) internal {
+        
+        BreederInfo storage breederInfo = _tokenMetadata[tokenId].breeder;
+
+        // If this is the first invocation, set creation date
+        if (breederInfo.creationDate == 0) {
+            breederInfo.creationDate = block.timestamp;
+        }
+
+        uint256 lastUpdateDate = block.timestamp;
+       
+        _tokenMetadata[tokenId].breeder = BreederInfo({
+            typeOfAnimal: typeOfAnimal,
+            placeOfOrigin: placeOfOrigin,
+            gender: gender,
+            weight: weight,
+            healthInformation: healthInformation,
+            creationDate: breederInfo.creationDate,
+            lastUpdateDate: lastUpdateDate
         });
+
+        _tokenMetadata[tokenId].lastUpdateDate = lastUpdateDate;
+
     }
 
     function setRenderingPlantInfo(
-        uint256 _tokenId,
-        string memory _countryOfSlaughter,
-        uint256 _slaughterhouseAccreditationNumber,
-        uint256 _slaughterDate
-    ) public {
-        _tokenMetadata[_tokenId].renderingPlant = RenderingPlantInfo({
-            countryOfSlaughter: _countryOfSlaughter,
-            slaughterhouseAccreditationNumber: _slaughterhouseAccreditationNumber,
-            slaughterDate: _slaughterDate
-        });
+        uint256 tokenId,
+        string memory countryOfSlaughter,
+        uint256 slaughterhouseAccreditationNumber,
+        uint256 slaughterDate
+    ) internal {
+         RenderingPlantInfo storage renderingPlant = _tokenMetadata[tokenId].renderingPlant;
+
+        // If this is the first invocation, set creation date
+        if (renderingPlant.creationDate == 0) {
+            renderingPlant.creationDate = block.timestamp;
+        }
+
+        renderingPlant.countryOfSlaughter = countryOfSlaughter;
+        renderingPlant.slaughterhouseAccreditationNumber = slaughterhouseAccreditationNumber;
+        renderingPlant.slaughterDate = slaughterDate;
+
+        uint256 lastUpdateDate = block.timestamp;
+        renderingPlant.lastUpdateDate = lastUpdateDate;
+        _tokenMetadata[tokenId].lastUpdateDate = lastUpdateDate;
     }
 
     function getSupplyChainData(
         uint256 _tokenId
-    ) public view returns (MetaData memory) {
+    ) internal view returns (MetaData memory) {
         return _tokenMetadata[_tokenId];
     }
 
-    function deleteSupplyChainData(uint256 _tokenId) public {
+    function deleteSupplyChainData(uint256 _tokenId) internal {
         delete _tokenMetadata[_tokenId];
     }
 }
 
-/* function getPlaceOfOrigin(
-        uint256 _tokenId
-    ) public view returns (string memory) {
-        return _tokenMetadata[_tokenId].breeder.placeOfOrigin;
-    }
-
-    function getGender(uint256 _tokenId) public view returns (string memory) {
-        return _tokenMetadata[_tokenId].breeder.gender;
-    }
-
-    function getWeight(uint256 _tokenId) public view returns (uint256) {
-        return _tokenMetadata[_tokenId].breeder.weight;
-    }
-
-    function getHealthInformation(
-        uint256 _tokenId
-    ) public view returns (string memory) {
-        return _tokenMetadata[_tokenId].breeder.healthInformation;
-    }
-
-    function getCreationDate(uint256 _tokenId) public view returns (uint256) {
-        return _tokenMetadata[_tokenId].breeder.creationDate;
-    } */
-
-/*  // Struct for Rendering Plant
-    struct RenderingPlantInfo {
-        string countryOfSlaughter;
-        uint256 slaughterhouseAccreditationNumber;
-        uint256 slaughterDate;
-    }
-
-    // Struct for Carrier (picking up meat carcasses)
-    struct CarrierInfo {
-        uint256 refrigeratorTemperature;
-        uint256 humidity;
-    }
-
-    // Struct for Factory
-    struct FactoryInfo {
-        uint256 factoryCuttingAccreditationNumber;
-        uint256 cuttingDate;
-        string countryOfCutting;
-    }
- */
-
-// Mapping to track rendering plants
-/*    mapping(address => RenderingPlantInfo) public renderingPlants;
-
-    // Mapping to track carriers
-    mapping(address => CarrierInfo) public carriers;
-
-    // Mapping to track factories
-    mapping(address => FactoryInfo) public factories; */
-
-// Struct for Token Metadata

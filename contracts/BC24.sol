@@ -29,6 +29,9 @@ contract BC24 is
     //emits an event when a new token is created
     event NFTMinted(uint256 indexed _id);
 
+    // emits an event when metadata is changed
+    event MetaDataChanged(string _message);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -64,6 +67,7 @@ contract BC24 is
         address account
     ) public onlyRole(MINTER_ROLE) returns (uint256) {
         uint256 tokenId = _nextTokenId;
+        SupplyChainData.createMetaData(tokenId);
         _mint(account, tokenId, 1, "");
         _nextTokenId++;
         emit NFTMinted(tokenId);
@@ -72,37 +76,52 @@ contract BC24 is
 
     /* Adding Metadata stuff */
     function addBreedingInfo(
-        uint256 _tokenId /* For now only default... add at your leasure */
-    ) public returns (string memory) {
+        uint256 tokenId,
+        string memory typeOfAnimal,
+        string memory placeOfOrigin,
+        string memory gender,
+        uint256 weight,
+        string memory healthInformation
+    ) public onlyRole(MINTER_ROLE) returns (string memory){
+
         SupplyChainData.setBreederInfo(
-            _tokenId,
-            "Zurich",
-            "male",
-            500,
-            "healthy",
-            block.timestamp
+            tokenId,
+            typeOfAnimal,
+            placeOfOrigin,
+            gender,
+            weight,
+            healthInformation
         );
+        
+        emit MetaDataChanged("Breeding info added successfully.");
 
         return "Breeding info added successfully.";
     }
 
     function addRenderingPlantInfo(
-        uint256 _tokenId /* For now only default... add at your leasure */
-    ) public returns (string memory) {
+        uint256 tokenId,
+        string memory countryOfSlaughter,
+        uint256 slaughterhouseAccreditationNumber,
+        uint256 slaughterDate
+    ) public {
         SupplyChainData.setRenderingPlantInfo(
-            _tokenId,
-            "Switzerland",
-            123456,
-            block.timestamp
+            tokenId,
+            countryOfSlaughter,
+            slaughterhouseAccreditationNumber,
+            slaughterDate
         );
 
-        return "Rendering plant info added successfully.";
+        emit MetaDataChanged("Rendering plant info added successfully.");
     }
 
     function getMetaData(
         uint256 _tokenId
     ) public view returns (MetaData memory) {
         return SupplyChainData.getSupplyChainData(_tokenId);
+    }
+
+    function tester() public pure returns (string memory) {
+        return "Hello World";
     }
 
     /* Destroys a Token and its associated Metadata */

@@ -11,3 +11,6 @@ artifacts
 
 # chain data
 local_chain/ganache_data
+
+# python stuff
+env
