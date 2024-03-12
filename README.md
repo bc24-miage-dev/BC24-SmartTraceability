@@ -47,11 +47,6 @@ Inspect token:
 await bc.getMetadata(<id>)
 ```
 
-Set meta data:
-```
-await bc.setMetadata(<id>, {"placeOfOrigin":"Paris", "gender":"female", "weight":400, "healthInformation":"healthy", "creationDate":"01-01-2024"}' )
-```
-
 Delete token:
 
 ```

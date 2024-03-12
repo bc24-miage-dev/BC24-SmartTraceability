@@ -43,3 +43,8 @@ contract.functions.addBreedingInfo(0, "Cow", "Zurich", "male", 300, "healthy").t
     'from': allowed_wallet_address})
 
 print(contract.functions.getMetaData(0).call())
+
+contract.functions.destroyToken(allowed_wallet_address,0,1).transact({
+    'from': allowed_wallet_address})
+
+print(contract.functions.getMetaData(0).call())
