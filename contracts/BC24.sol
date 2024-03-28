@@ -17,9 +17,9 @@ contract BC24 is
     AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
-    SupplyChainData
+    AnimalData
 {
-    bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
+    bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant TOKEN_OWNER_ROLE = keccak256("OWNER_ROLE");
@@ -27,7 +27,7 @@ contract BC24 is
     uint256 private _nextTokenId;
 
     //emits an event when a new token is created
-    event NFTMinted(uint256 indexed _id);
+    event AnimalNFTMinted(uint256 indexed _id);
 
     // emits an event when metadata is changed
     event MetaDataChanged(string _message);
@@ -37,12 +37,7 @@ contract BC24 is
         _disableInitializers();
     }
 
-    function initialize(
-        address defaultAdmin
-    )
-        public
-        initializer
-    {
+    function initialize(address defaultAdmin) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
@@ -52,11 +47,9 @@ contract BC24 is
     }
 
     /* Not directly needed at the moment since we need to define it.  */
-    modifier onlyTokenOwner(uint256 tokenId) {
-        require(
-            hasRole(TOKEN_OWNER_ROLE, msg.sender),
-            "Caller is not the token owner"
-        );
+    modifier onlyBreederRoler() {
+        require(hasRole(BREEDER_ROLE, msg.sender), "Caller is not a breeder");
+        require(hasRole(MINTER_ROLE, msg.sender), "Caller is not a breeder");
         _;
     }
 
@@ -71,41 +64,45 @@ contract BC24 is
             grantRole(MINTER_ROLE, account);
         } else if (
             keccak256(abi.encodePacked(role)) ==
-            keccak256(abi.encodePacked("OWNER_ROLE"))
+            keccak256(abi.encodePacked("BREEDER_ROLE"))
         ) {
-            grantRole(TOKEN_OWNER_ROLE, account);
+            grantRole(BREEDER_ROLE, account);
         } else {
             revert("Invalid role");
         }
     }
 
-    function createToken(
+    function createAnimalNFT(
         address account
-    ) public onlyRole(MINTER_ROLE) returns (uint256) {
+    ) public onlyBreederRoler returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        SupplyChainData.createMetaData(tokenId);
+        AnimalData.createAnimalData(tokenId);
         _mint(account, tokenId, 1, "");
         _nextTokenId++;
-        emit NFTMinted(tokenId);
+        emit AnimalNFTMinted(tokenId);
         return tokenId;
     }
 
     /* Adding Metadata stuff */
-    function addBreedingInfo(
+    function setBreederInfo(
         uint256 tokenId,
-        string memory typeOfAnimal,
         string memory placeOfOrigin,
+        uint256 dateOfBirth,
         string memory gender,
         uint256 weight,
-        string memory healthInformation
+        string[] memory sicknessList,
+        string[] memory vaccinationList,
+        uint256[] memory foodList
     ) public onlyRole(MINTER_ROLE) returns (string memory) {
-        SupplyChainData.setBreederInfo(
+        AnimalData.setAnimalData(
             tokenId,
-            typeOfAnimal,
             placeOfOrigin,
+            dateOfBirth,
             gender,
             weight,
-            healthInformation
+            sicknessList,
+            vaccinationList,
+            foodList
         );
 
         emit MetaDataChanged("Breeding info added successfully.");
@@ -113,26 +110,10 @@ contract BC24 is
         return "Breeding info added successfully.";
     }
 
-    function addRenderingPlantInfo(
-        uint256 tokenId,
-        string memory countryOfSlaughter,
-        uint256 slaughterhouseAccreditationNumber,
-        uint256 slaughterDate
-    ) public {
-        SupplyChainData.setRenderingPlantInfo(
-            tokenId,
-            countryOfSlaughter,
-            slaughterhouseAccreditationNumber,
-            slaughterDate
-        );
-
-        emit MetaDataChanged("Rendering plant info added successfully.");
-    }
-
-    function getMetaData(
+    function getBreederInfo(
         uint256 _tokenId
-    ) public view returns (MetaData memory) {
-        return SupplyChainData.getSupplyChainData(_tokenId);
+    ) public view returns (AnimalInfo memory) {
+        return AnimalData.getAnimalData(_tokenId);
     }
 
     function tester() public pure returns (string memory) {
@@ -150,7 +131,7 @@ contract BC24 is
             "There is no such token to destroy."
         );
         _burn(account, _tokenId, amount);
-        SupplyChainData.deleteSupplyChainData(_tokenId);
+        //SupplyChainData.deleteSupplyChainData(_tokenId);
         return "Token has been successfully destroyed";
     }
 
