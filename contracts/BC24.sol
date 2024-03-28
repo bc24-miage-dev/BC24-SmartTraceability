@@ -22,7 +22,7 @@ contract BC24 is
     bytes32 public constant URI_SETTER_ROLE = keccak256("URI_SETTER_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
-    bytes32 public constant TOKEN_OWNER_ROLE = keccak256("TOKEN_OWNER_ROLE");
+    bytes32 public constant TOKEN_OWNER_ROLE = keccak256("OWNER_ROLE");
 
     uint256 private _nextTokenId;
 
@@ -38,20 +38,17 @@ contract BC24 is
     }
 
     function initialize(
-        address defaultAdmin,
-        address minter,
-        address upgrader,
-        address tokenOwner
-    ) public initializer {
+        address defaultAdmin
+    )
+        public
+        initializer
+    {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
-        _grantRole(MINTER_ROLE, minter);
-        _grantRole(UPGRADER_ROLE, upgrader);
-        _grantRole(TOKEN_OWNER_ROLE, tokenOwner);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -61,6 +58,25 @@ contract BC24 is
             "Caller is not the token owner"
         );
         _;
+    }
+
+    function grantRoleToAddress(
+        address account,
+        string memory role
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (
+            keccak256(abi.encodePacked(role)) ==
+            keccak256(abi.encodePacked("MINTER_ROLE"))
+        ) {
+            grantRole(MINTER_ROLE, account);
+        } else if (
+            keccak256(abi.encodePacked(role)) ==
+            keccak256(abi.encodePacked("OWNER_ROLE"))
+        ) {
+            grantRole(TOKEN_OWNER_ROLE, account);
+        } else {
+            revert("Invalid role");
+        }
     }
 
     function createToken(
@@ -82,8 +98,7 @@ contract BC24 is
         string memory gender,
         uint256 weight,
         string memory healthInformation
-    ) public onlyRole(MINTER_ROLE) returns (string memory){
-
+    ) public onlyRole(MINTER_ROLE) returns (string memory) {
         SupplyChainData.setBreederInfo(
             tokenId,
             typeOfAnimal,
@@ -92,7 +107,7 @@ contract BC24 is
             weight,
             healthInformation
         );
-        
+
         emit MetaDataChanged("Breeding info added successfully.");
 
         return "Breeding info added successfully.";

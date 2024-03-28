@@ -10,9 +10,9 @@ async function main() {
   // TODO: Set addresses for the contract arguments below
   const instance = await upgrades.deployProxy(ContractFactory, [
     defaultAdmin,
-    minter,
+    /* minter,
     upgrader,
-    tokenOwner,
+    tokenOwner, */
   ]);
   await instance.waitForDeployment();
 
