@@ -1,7 +1,7 @@
 pragma solidity ^0.8.0;
 import "./BaseData.sol";
 
-abstract contract AnimalData is BaseData {
+contract AnimalData is BaseData {
     struct AnimalInfo {
         string placeOfOrigin;
         uint256 dateOfBirth;
