@@ -8,7 +8,8 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155Burn
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "./SupplyChainData.sol";
+import "./AnimalData.sol";
+import "./TransportData.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -17,14 +18,22 @@ contract BC24 is
     AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
-    AnimalData
+    AnimalData,
+    TransportData
 {
-    bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
+    //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+
+    // specific roles
+    bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
+    bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE");
+
+    // other roles
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
     bytes32 public constant TOKEN_OWNER_ROLE = keccak256("OWNER_ROLE");
 
     uint256 private _nextTokenId;
+    mapping(uint256 => address) private tokenOwners;
 
     //emits an event when a new token is created
     event AnimalNFTMinted(uint256 indexed _id);
@@ -47,9 +56,34 @@ contract BC24 is
     }
 
     /* Not directly needed at the moment since we need to define it.  */
-    modifier onlyBreederRoler() {
+    modifier onlyBreederRole() {
         require(hasRole(BREEDER_ROLE, msg.sender), "Caller is not a breeder");
-        require(hasRole(MINTER_ROLE, msg.sender), "Caller is not a breeder");
+        _;
+    }
+
+    modifier onlyTransporterRole() {
+        require(
+            hasRole(TRANSPORTER_ROLE, msg.sender),
+            "Caller is not a transporter"
+        );
+        _;
+    }
+
+    modifier onlyMinterRole() {
+        require(hasRole(MINTER_ROLE, msg.sender), "Caller is not a minter");
+        _;
+    }
+
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(
+            msg.sender == tokenOwners[tokenId],
+            "Caller does not own this token"
+        );
+        _;
+    }
+
+    modifier receiverOnlyRole(bytes32 role, address receiver) {
+        require(hasRole(role, receiver), "Caller is not valid receiver");
         _;
     }
 
@@ -67,24 +101,29 @@ contract BC24 is
             keccak256(abi.encodePacked("BREEDER_ROLE"))
         ) {
             grantRole(BREEDER_ROLE, account);
+        } else if (
+            keccak256(abi.encodePacked(role)) ==
+            keccak256(abi.encodePacked("TRANSPORTER_ROLE"))
+        ) {
+            grantRole(TRANSPORTER_ROLE, account);
         } else {
             revert("Invalid role");
         }
     }
 
-    function createAnimalNFT(
+    function createAnimal(
         address account
-    ) public onlyBreederRoler returns (uint256) {
+    ) public onlyBreederRole onlyMinterRole returns (uint256) {
         uint256 tokenId = _nextTokenId;
         AnimalData.createAnimalData(tokenId);
         _mint(account, tokenId, 1, "");
+        tokenOwners[tokenId] = msg.sender;
         _nextTokenId++;
         emit AnimalNFTMinted(tokenId);
         return tokenId;
     }
 
-    /* Adding Metadata stuff */
-    function setBreederInfo(
+    function updateAnimal(
         uint256 tokenId,
         string memory placeOfOrigin,
         uint256 dateOfBirth,
@@ -93,7 +132,7 @@ contract BC24 is
         string[] memory sicknessList,
         string[] memory vaccinationList,
         uint256[] memory foodList
-    ) public onlyRole(MINTER_ROLE) returns (string memory) {
+    ) public onlyBreederRole onlyTokenOwner(tokenId) returns (string memory) {
         AnimalData.setAnimalData(
             tokenId,
             placeOfOrigin,
@@ -110,10 +149,51 @@ contract BC24 is
         return "Breeding info added successfully.";
     }
 
-    function getBreederInfo(
-        uint256 _tokenId
-    ) public view returns (AnimalInfo memory) {
-        return AnimalData.getAnimalData(_tokenId);
+    function getAnimal(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (AnimalInfo memory) {
+        return AnimalData.getAnimalData(tokenId);
+    }
+
+    function giveAnimalToTransporter(
+        uint256 tokenId,
+        address newOwner
+    )
+        public
+        onlyBreederRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(TRANSPORTER_ROLE, newOwner)
+    {
+        safeTransferFrom(msg.sender, newOwner, tokenId, 1, "");
+        tokenOwners[tokenId] = newOwner;
+        TransportData.createTransportData(tokenId);
+    }
+
+    function updateTransport(
+        uint256 tokenId,
+        uint256 duration,
+        uint256 temperature,
+        uint256 humidity
+    )
+        public
+        onlyTransporterRole
+        onlyTokenOwner(tokenId)
+        returns (string memory)
+    {
+        TransportData.setTransportData(
+            tokenId,
+            duration,
+            temperature,
+            humidity
+        );
+        emit MetaDataChanged("Transport info added successfully.");
+        return "Transport info added successfully.";
+    }
+
+    function getTransport(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (TransportInfo memory) {
+        return TransportData.getTransportData(tokenId);
     }
 
     function tester() public pure returns (string memory) {
@@ -154,5 +234,9 @@ contract BC24 is
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
+    }
+
+    function ownerOf(uint256 tokenId) public view returns (address) {
+        return tokenOwners[tokenId];
     }
 }
