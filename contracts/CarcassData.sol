@@ -10,7 +10,7 @@ abstract contract CarcassData is BaseData {
         TimingInfo timingInfo;
         uint256 animalId;
     }
-   
+
     mapping(uint256 => CarcassInfo) private _tokenCarcassData;
 
     function createCarcassData(uint256 tokenId, uint256 animalId) internal {
@@ -24,29 +24,29 @@ abstract contract CarcassData is BaseData {
         string memory agreementNumber,
         string memory countryOfSlaughter,
         uint256 dateOfSlaughter,
-        uint256 carcassWeight,
-        uint256 animalId
-    ) public {
+        uint256 carcassWeight
+    ) internal {
         CarcassInfo storage carcass = _tokenCarcassData[tokenId];
         carcass.agreementNumber = agreementNumber;
         carcass.countryOfSlaughter = countryOfSlaughter;
         carcass.dateOfSlaughter = dateOfSlaughter;
         carcass.carcassWeight = carcassWeight;
-        carcass.animalId = animalId;
         carcass.timingInfo.creationDate = block.timestamp;
         carcass.timingInfo.lastUpdateDate = block.timestamp;
     }
 
-    function getCarcassData(uint256 tokenId) public view returns (CarcassInfo memory) {
+    function getCarcassData(
+        uint256 tokenId
+    ) public view returns (CarcassInfo memory) {
         return _tokenCarcassData[tokenId];
     }
 
-    function createDemiCarcass(uint256 tokenId,  uint256 dateOfSlaughter,
+    function createDemiCarcass(
+        uint256 tokenId,
         uint256 demiCarcassAWeight,
         uint256 demiCarcassBWeight,
-        uint256 carcassId ) internal {
-        CarcassInfo storage carcass = _tokenCarcassData[tokenId];
-        carcass.timingInfo.creationDate = block.timestamp;
-
+        uint256 carcassId
+    ) internal {
+        // needs more details
     }
 }

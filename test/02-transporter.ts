@@ -7,11 +7,11 @@ describe("BC24-Transporter", function () {
     let random: any;
     let breeder: any;
     let transporter: any;
-    let slaughterer:any;
+    let slaughterer: any;
     let contract: any;
-    let tokenId: any;
+    let animalId: any;
 
-    
+
 
     beforeEach(async function () {
         const ContractFactory = await ethers.getContractFactory("BC24");
@@ -40,15 +40,16 @@ describe("BC24-Transporter", function () {
         await contract.connect(defaultAdmin).grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
         await contract.connect(defaultAdmin).grantRoleToAddress(slaughterer.address, "SLAUGHTER_ROLE");
 
-        const transaction =await contract.connect(breeder).createAnimal(breeder.address);
-        tokenId = transaction.value;   
-        await contract.connect(breeder).giveAnimalToTransporter(tokenId, transporter.address); 
-       
+        const transaction = await contract.connect(breeder).createAnimal(breeder.address);
+        animalId = transaction.value;
+        await contract.connect(breeder).transferAnimalToTransporter(animalId, transporter.address);
+
+
     });
 
     it("Test contract", async function () {
         expect(await contract.uri(0)).to.equal("");
-        expect(await contract.connect(transporter).ownerOf(tokenId)).to.equal(transporter.address);
+        expect(await contract.connect(transporter).ownerOf(animalId)).to.equal(transporter.address);
     })
 
 
@@ -57,12 +58,12 @@ describe("BC24-Transporter", function () {
         const temperature = 25;
         const humidity = 50;
 
-        await expect(await contract.connect(transporter).updateTransport(tokenId, duration, temperature, humidity)
+        await expect(await contract.connect(transporter).updateTransport(animalId, duration, temperature, humidity)
         )
             .to.emit(contract, "MetaDataChanged")
             .withArgs("Transport info added successfully.");
 
-        const transportData = await contract.connect(transporter).getTransport(tokenId);
+        const transportData = await contract.connect(transporter).getTransport(animalId);
         expect(transportData.duration).to.equal(duration);
         expect(transportData.temperature).to.equal(temperature);
         expect(transportData.humidity).to.equal(humidity);
@@ -79,12 +80,30 @@ describe("BC24-Transporter", function () {
         const vaccinationList: [] = []; // Empty list
         const foodList: [] = []; // Empty list
 
-        await expect(contract.connect(transporter).updateAnimal(tokenId, placeOfOrigin, dateOfBirth, gender, weight, sicknessList, vaccinationList, foodList)
+        await expect(contract.connect(transporter).updateAnimal(animalId, placeOfOrigin, dateOfBirth, gender, weight, sicknessList, vaccinationList, foodList)
         ).to.be.revertedWith("Caller is not a breeder")
     });
 
-    it("should transfer animal to slaughterer", async function () { 
-        await contract.connect(transporter).transferAnimalToSlaugtherer(tokenId, slaughterer.address);
-        expect(await contract.connect(slaughterer).ownerOf(tokenId)).to.equal(slaughterer.address);
-      });
+    it("should transfer animal to slaughterer", async function () {
+        await contract.connect(transporter).transferAnimalToSlaugtherer(animalId, slaughterer.address);
+        expect(await contract.connect(slaughterer).ownerOf(animalId)).to.equal(slaughterer.address);
+    });
+
+    it("should not allow transporter to change carcass", async function () {
+        await contract.connect(transporter).transferAnimalToSlaugtherer(animalId, slaughterer.address);
+        const transaction = await contract.connect(slaughterer).slaughterAnimal(animalId)
+        const carcassId = transaction.value
+
+        await contract.connect(slaughterer).transferCarcassToTransporter(carcassId, transporter.address);
+        expect(await contract.connect(transporter).ownerOf(carcassId)).to.equal(transporter.address);
+
+        const agreementNumber = "AG123";
+        const countryOfSlaughter = "Country";
+        const dateOfSlaughter = Math.floor(Date.now() / 1000);
+        const carcassWeight = 100;
+
+        await expect(contract.connect(transporter).updateCarcass(carcassId, agreementNumber, countryOfSlaughter, dateOfSlaughter, carcassWeight)).to.revertedWith("Caller is not a slaughterer");
+    });
+
+
 });

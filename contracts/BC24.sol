@@ -20,7 +20,7 @@ contract BC24 is
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
     AnimalData,
-    TransportData, 
+    TransportData,
     CarcassData
 {
     //general roles
@@ -30,7 +30,6 @@ contract BC24 is
     bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
     bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE");
     bytes32 public constant SLAUGHTER_ROLE = keccak256("SLAUGHTER_ROLE");
-    
 
     // other roles
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
@@ -45,7 +44,6 @@ contract BC24 is
 
     // emits an event when metadata is changed
     event MetaDataChanged(string _message);
-
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -75,14 +73,13 @@ contract BC24 is
         _;
     }
 
-   modifier onlySlaughterRole() {
+    modifier onlySlaughterRole() {
         require(
             hasRole(SLAUGHTER_ROLE, msg.sender),
-            "Caller is not a transporter"
+            "Caller is not a slaughterer"
         );
         _;
     }
-    
 
     modifier onlyMinterRole() {
         require(hasRole(MINTER_ROLE, msg.sender), "Caller is not a minter");
@@ -131,6 +128,8 @@ contract BC24 is
         }
     }
 
+    /* Token Creation functions */
+
     function createAnimal(
         address account
     ) public onlyBreederRole onlyMinterRole returns (uint256) {
@@ -143,18 +142,21 @@ contract BC24 is
         return tokenId;
     }
 
-    function slaughterAnimal(uint256 animalId) public onlySlaughterRole onlyTokenOwner(animalId) returns(uint256){
+    function slaughterAnimal(
+        uint256 animalId
+    ) public onlySlaughterRole onlyTokenOwner(animalId) returns (uint256) {
         AnimalData.killAnimal(animalId);
-        
+
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
         CarcassData.createCarcassData(tokenId, animalId);
-         tokenOwners[tokenId] = msg.sender;
+        tokenOwners[tokenId] = msg.sender;
         _nextTokenId++;
         emit CarcassNFTCreated(tokenId);
         return tokenId;
     }
 
+    /* Token Update functions */
 
     function updateAnimal(
         uint256 tokenId,
@@ -182,45 +184,6 @@ contract BC24 is
         return "Breeding info added successfully.";
     }
 
-    function getAnimal(
-        uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (AnimalInfo memory) {
-        return AnimalData.getAnimalData(tokenId);
-    }
-        function getCarcass(
-        uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (CarcassInfo memory) {
-        return CarcassData.getCarcassData(tokenId);
-    }
-
-    function giveAnimalToTransporter(
-        uint256 tokenId,
-        address transporter
-    )
-        public
-        onlyBreederRole
-        onlyTokenOwner(tokenId)
-        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
-    {
-        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
-        tokenOwners[tokenId] = transporter;
-        TransportData.createTransportData(tokenId);
-    }
-
-       function transferAnimalToSlaugtherer(
-        uint256 tokenId,
-        address slaughterer
-    )
-        public
-        onlyTransporterRole
-        onlyTokenOwner(tokenId)
-        receiverOnlyRole(SLAUGHTER_ROLE, slaughterer)
-    {
-        safeTransferFrom(msg.sender, slaughterer, tokenId, 1, "");
-        tokenOwners[tokenId] = slaughterer;
-    }
-    
-
     function updateTransport(
         uint256 tokenId,
         uint256 duration,
@@ -242,23 +205,91 @@ contract BC24 is
         return "Transport info added successfully.";
     }
 
+    function updateCarcass(
+        uint256 tokenId,
+        string memory agreementNumber,
+        string memory countryOfSlaughter,
+        uint256 dateOfSlaughter,
+        uint256 carcassWeight
+    ) public onlySlaughterRole onlyTokenOwner(tokenId) returns (string memory) {
+        CarcassData.setCarcassData(
+            tokenId,
+            agreementNumber,
+            countryOfSlaughter,
+            dateOfSlaughter,
+            carcassWeight
+        );
+
+        emit MetaDataChanged("Carcas info added successfully.");
+
+        return "Carcas info added successfully.";
+    }
+
+    /* Token Getter functions */
+
+    function getAnimal(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (AnimalInfo memory) {
+        return AnimalData.getAnimalData(tokenId);
+    }
+
+    function getCarcass(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (CarcassInfo memory) {
+        return CarcassData.getCarcassData(tokenId);
+    }
+
     function getTransport(
         uint256 tokenId
     ) public view onlyTokenOwner(tokenId) returns (TransportInfo memory) {
         return TransportData.getTransportData(tokenId);
     }
 
+    /* Token Transfer functions */
+
+    function transferAnimalToTransporter(
+        uint256 tokenId,
+        address transporter
+    )
+        public
+        onlyBreederRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
+    {
+        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
+        tokenOwners[tokenId] = transporter;
+        TransportData.createTransportData(tokenId);
+    }
+
+    function transferAnimalToSlaugtherer(
+        uint256 tokenId,
+        address slaughterer
+    )
+        public
+        onlyTransporterRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(SLAUGHTER_ROLE, slaughterer)
+    {
+        safeTransferFrom(msg.sender, slaughterer, tokenId, 1, "");
+        tokenOwners[tokenId] = slaughterer;
+    }
+
+    function transferCarcassToTransporter(
+        uint256 tokenId,
+        address transporter
+    )
+        public
+        onlySlaughterRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
+    {
+        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
+        tokenOwners[tokenId] = transporter;
+    }
+
     function tester() public pure returns (string memory) {
         return "Hello World";
     }
-
-
-
-
-
-
-
-
 
     /* Destroys a Token and its associated Metadata */
     function destroyToken(
@@ -279,10 +310,6 @@ contract BC24 is
     function getTokenIndex() public view returns (uint256) {
         return _nextTokenId;
     }
-
-
-
-    
 
     /* Automatically created solidity functions */
     function _authorizeUpgrade(

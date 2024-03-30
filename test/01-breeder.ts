@@ -122,7 +122,7 @@ describe("BC24-Breeder", function () {
     await expect(contract.connect(transporter).getAnimal(0)
     ).to.be.revertedWith("Caller does not own this token")
 
-    await contract.connect(breeder).giveAnimalToTransporter(0, transporter.address);
+    await contract.connect(breeder).transferAnimalToTransporter(0, transporter.address);
 
     await expect(contract.connect(breeder).getAnimal(0)
     ).to.be.revertedWith("Caller does not own this token")
