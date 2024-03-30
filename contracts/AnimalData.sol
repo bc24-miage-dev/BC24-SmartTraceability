@@ -13,6 +13,7 @@ contract AnimalData is BaseData {
         // for for dates
         TimingInfo timingInfo;
         //string typeOfAnimal;
+        bool isDead;
     }
 
     mapping(uint256 => AnimalInfo) private _tokenAnimalData;
@@ -49,5 +50,11 @@ contract AnimalData is BaseData {
         uint256 tokenId
     ) public view virtual returns (AnimalInfo memory) {
         return _tokenAnimalData[tokenId];
+    }
+
+    function killAnimal(uint256 animalId) internal {
+        AnimalInfo storage animal = _tokenAnimalData[animalId];
+        require(animal.isDead == false, "Animal already has been slaughtered"); 
+        animal.isDead = true;
     }
 }

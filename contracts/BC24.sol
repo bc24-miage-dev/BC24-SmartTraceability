@@ -10,6 +10,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./AnimalData.sol";
 import "./TransportData.sol";
+import "./CarcassData.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -19,7 +20,8 @@ contract BC24 is
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
     AnimalData,
-    TransportData
+    TransportData, 
+    CarcassData
 {
     //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -27,6 +29,8 @@ contract BC24 is
     // specific roles
     bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
     bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE");
+    bytes32 public constant SLAUGHTER_ROLE = keccak256("SLAUGHTER_ROLE");
+    
 
     // other roles
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
@@ -37,9 +41,11 @@ contract BC24 is
 
     //emits an event when a new token is created
     event AnimalNFTMinted(uint256 indexed _id);
+    event CarcassNFTCreated(uint256 indexed _id);
 
     // emits an event when metadata is changed
     event MetaDataChanged(string _message);
+
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -68,6 +74,15 @@ contract BC24 is
         );
         _;
     }
+
+   modifier onlySlaughterRole() {
+        require(
+            hasRole(SLAUGHTER_ROLE, msg.sender),
+            "Caller is not a transporter"
+        );
+        _;
+    }
+    
 
     modifier onlyMinterRole() {
         require(hasRole(MINTER_ROLE, msg.sender), "Caller is not a minter");
@@ -106,6 +121,11 @@ contract BC24 is
             keccak256(abi.encodePacked("TRANSPORTER_ROLE"))
         ) {
             grantRole(TRANSPORTER_ROLE, account);
+        } else if (
+            keccak256(abi.encodePacked(role)) ==
+            keccak256(abi.encodePacked("SLAUGHTER_ROLE"))
+        ) {
+            grantRole(SLAUGHTER_ROLE, account);
         } else {
             revert("Invalid role");
         }
@@ -122,6 +142,19 @@ contract BC24 is
         emit AnimalNFTMinted(tokenId);
         return tokenId;
     }
+
+    function slaughterAnimal(uint256 animalId) public onlySlaughterRole onlyTokenOwner(animalId) returns(uint256){
+        AnimalData.killAnimal(animalId);
+        
+        uint256 tokenId = _nextTokenId;
+        _mint(msg.sender, tokenId, 1, "");
+        CarcassData.createCarcassData(tokenId, animalId);
+         tokenOwners[tokenId] = msg.sender;
+        _nextTokenId++;
+        emit CarcassNFTCreated(tokenId);
+        return tokenId;
+    }
+
 
     function updateAnimal(
         uint256 tokenId,
@@ -154,20 +187,39 @@ contract BC24 is
     ) public view onlyTokenOwner(tokenId) returns (AnimalInfo memory) {
         return AnimalData.getAnimalData(tokenId);
     }
+        function getCarcass(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (CarcassInfo memory) {
+        return CarcassData.getCarcassData(tokenId);
+    }
 
     function giveAnimalToTransporter(
         uint256 tokenId,
-        address newOwner
+        address transporter
     )
         public
         onlyBreederRole
         onlyTokenOwner(tokenId)
-        receiverOnlyRole(TRANSPORTER_ROLE, newOwner)
+        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
     {
-        safeTransferFrom(msg.sender, newOwner, tokenId, 1, "");
-        tokenOwners[tokenId] = newOwner;
+        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
+        tokenOwners[tokenId] = transporter;
         TransportData.createTransportData(tokenId);
     }
+
+       function transferAnimalToSlaugtherer(
+        uint256 tokenId,
+        address slaughterer
+    )
+        public
+        onlyTransporterRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(SLAUGHTER_ROLE, slaughterer)
+    {
+        safeTransferFrom(msg.sender, slaughterer, tokenId, 1, "");
+        tokenOwners[tokenId] = slaughterer;
+    }
+    
 
     function updateTransport(
         uint256 tokenId,
@@ -200,6 +252,14 @@ contract BC24 is
         return "Hello World";
     }
 
+
+
+
+
+
+
+
+
     /* Destroys a Token and its associated Metadata */
     function destroyToken(
         address account,
@@ -219,6 +279,10 @@ contract BC24 is
     function getTokenIndex() public view returns (uint256) {
         return _nextTokenId;
     }
+
+
+
+    
 
     /* Automatically created solidity functions */
     function _authorizeUpgrade(
