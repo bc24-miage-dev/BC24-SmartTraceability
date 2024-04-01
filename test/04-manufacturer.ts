@@ -81,7 +81,7 @@ describe("BC24-Manufacturer", function () {
         expect(meat.agreementNumber).to.equal(agreementNumber);
         expect(meat.countryOfCutting).to.equal(countryOfCutting);
         expect(meat.dateOfCutting).to.equal(dateOfCutting);
-   
+
 
     })
 
@@ -127,6 +127,14 @@ describe("BC24-Manufacturer", function () {
         const manufacturedProduct = await contract.connect(manufacturer).getManufacturedProduct(manufacturedProductId);
         expect(manufacturedProduct.productName).to.equal(productName);
         expect(manufacturedProduct.dateOfManufacturation).to.equal(dateOfManufacturation);
-   
     })
+
+    it("create new recipe", async function () { 
+        expect(0).to.equal(1)
+    });
+
+    it("create new manufacturedProduct with recipe", async function () { 
+        expect(0).to.equal(1)
+    });
+
 });
