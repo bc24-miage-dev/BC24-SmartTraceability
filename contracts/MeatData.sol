@@ -18,12 +18,12 @@ abstract contract MeatData is BaseData {
         meat.timingInfo.creationDate = block.timestamp;
     }
 
-    function setMeat(
+    function setMeatData(
         uint256 tokenId,
         string memory agreementNumber,
         string memory countryOfCutting,
         uint256 dateOfCutting
-    ) public {
+    ) internal {
         MeatInfo storage meat = _tokenMeatData[tokenId];
         meat.agreementNumber = agreementNumber;
         meat.countryOfCutting = countryOfCutting;
@@ -31,7 +31,7 @@ abstract contract MeatData is BaseData {
         meat.timingInfo.lastUpdateDate = block.timestamp;
     }
 
-    function getMeat(uint256 tokenId) public view returns (MeatInfo memory) {
+    function getMeatData(uint256 tokenId) internal view returns (MeatInfo memory) {
         return _tokenMeatData[tokenId];
     }
 }

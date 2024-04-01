@@ -45,7 +45,7 @@ describe("BC24-Manufacturer", function () {
         carcassId = slaugtherTransaction.value
         await contract.connect(slaughterer).transferCarcassToTransporter(carcassId, transporter.address);
         await contract.connect(transporter).transferCarcassToManufacturer(carcassId, manufacturer.address);
-        
+
 
     });
 
@@ -68,13 +68,65 @@ describe("BC24-Manufacturer", function () {
 
         const meatId = transaction.value
 
+        const agreementNumber = "1111";
+        const countryOfCutting = "Schweiz";
+        const dateOfCutting = 1622524800;
+
+        await expect(await contract.connect(manufacturer).updateMeat(meatId, agreementNumber, countryOfCutting, dateOfCutting)
+        )
+            .to.emit(contract, "MetaDataChanged")
+            .withArgs("Meat info added successfully.");
+
+        const meat = await contract.connect(manufacturer).getMeat(meatId);
+        expect(meat.agreementNumber).to.equal(agreementNumber);
+        expect(meat.countryOfCutting).to.equal(countryOfCutting);
+        expect(meat.dateOfCutting).to.equal(dateOfCutting);
+   
+
+    })
+
+    it("create manufactured product", async function () {
+        const transaction = await contract.connect(manufacturer).createMeat(carcassId)
+
+        const meatId = transaction.value
+
         const agreementNumber = 1;
         const countryOfCutting = "Schweiz";
         const dateOfCutting = 1622524800;
 
         await expect(await contract.connect(manufacturer).updateMeat(meatId, agreementNumber, countryOfCutting, dateOfCutting)
         )
-          .to.emit(contract, "MetaDataChanged")
-          .withArgs("Meat info added successfully.");
+            .to.emit(contract, "MetaDataChanged")
+            .withArgs("Meat info added successfully.");
+
+
+        await expect(await contract.connect(manufacturer).createManufacturedProduct(meatId)
+        )
+            .to.emit(contract, "NFTMinted")
+            .withArgs("ManufacturedProduct created");
+    })
+
+
+    it("update manufacturedproduct data", async function () {
+        const transaction = await contract.connect(manufacturer).createMeat(carcassId)
+
+        const meatId = transaction.value
+
+        const productTranscation = await contract.connect(manufacturer).createManufacturedProduct(meatId)
+        const manufacturedProductId = productTranscation.value
+
+
+        const productName = "Schnitzel";
+        const dateOfManufacturation = 1622524800;
+
+        await expect(await contract.connect(manufacturer).updateManufacturedProduct(manufacturedProductId, dateOfManufacturation, productName)
+        )
+            .to.emit(contract, "MetaDataChanged")
+            .withArgs("ManufacturedProduct info added successfully.");
+
+        const manufacturedProduct = await contract.connect(manufacturer).getManufacturedProduct(manufacturedProductId);
+        expect(manufacturedProduct.productName).to.equal(productName);
+        expect(manufacturedProduct.dateOfManufacturation).to.equal(dateOfManufacturation);
+   
     })
 });

@@ -36,7 +36,7 @@ abstract contract CarcassData is BaseData {
 
     function getCarcassData(
         uint256 tokenId
-    ) public view returns (CarcassInfo memory) {
+    ) internal view returns (CarcassInfo memory) {
         return _tokenCarcassData[tokenId];
     }
 

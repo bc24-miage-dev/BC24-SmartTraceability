@@ -24,7 +24,8 @@ contract BC24 is
     AnimalData,
     TransportData,
     CarcassData,
-    MeatData
+    MeatData,
+    ManufacturedProductData
 {
     //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -186,6 +187,19 @@ contract BC24 is
         return tokenId;
     }
 
+    function createManufacturedProduct(
+        uint256 meatId
+    ) public onlyManufacturerRole onlyTokenOwner(meatId) returns (uint256) {
+        uint256 tokenId = _nextTokenId;
+        _mint(msg.sender, tokenId, 1, "");
+
+        ManufacturedProductData.createProductData(tokenId, meatId);
+        tokenOwners[tokenId] = msg.sender;
+        _nextTokenId++;
+        emit NFTMinted("ManufacturedProduct created");
+        return tokenId;
+    }
+
     /* Token Update functions */
 
     function updateAnimal(
@@ -266,7 +280,7 @@ contract BC24 is
         onlyTokenOwner(tokenId)
         returns (string memory)
     {
-        MeatData.setMeat(
+        MeatData.setMeatData(
             tokenId,
             agreementNumber,
             countryOfCutting,
@@ -274,6 +288,25 @@ contract BC24 is
         );
         emit MetaDataChanged("Meat info added successfully.");
         return "Meat info added successfully.";
+    }
+
+    function updateManufacturedProduct(
+        uint256 tokenId,
+        uint256 dateOfManufacturation,
+        string memory productName
+    )
+        public
+        onlyManufacturerRole
+        onlyTokenOwner(tokenId)
+        returns (string memory)
+    {
+        ManufacturedProductData.setManufacturedProductData(
+            tokenId,
+            dateOfManufacturation,
+            productName
+        );
+        emit MetaDataChanged("ManufacturedProduct info added successfully.");
+        return "ManufacturedProduct info added successfully.";
     }
 
     /* Token Getter functions */
@@ -294,6 +327,23 @@ contract BC24 is
         uint256 tokenId
     ) public view onlyTokenOwner(tokenId) returns (TransportInfo memory) {
         return TransportData.getTransportData(tokenId);
+    }
+
+    function getMeat(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (MeatInfo memory) {
+        return MeatData.getMeatData(tokenId);
+    }
+
+    function getManufacturedProduct(
+        uint256 tokenId
+    )
+        public
+        view
+        onlyTokenOwner(tokenId)
+        returns (ManufacturedProductInfo memory)
+    {
+        return ManufacturedProductData.getManufacturedProductData(tokenId);
     }
 
     /* Token Transfer functions */

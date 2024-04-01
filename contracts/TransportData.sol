@@ -21,7 +21,7 @@ contract TransportData is BaseData {
         uint256 duration,
         uint256 temperature,
         uint256 humidity
-    ) public {
+    ) internal {
         TransportInfo storage transport = _tokenTransportData[tokenId];
         transport.duration = duration;
         transport.temperature = temperature;
@@ -31,7 +31,7 @@ contract TransportData is BaseData {
 
     function getTransportData(
         uint256 tokenId
-    ) public view virtual returns (TransportInfo memory) {
+    ) internal view virtual returns (TransportInfo memory) {
         return _tokenTransportData[tokenId];
     }
 }

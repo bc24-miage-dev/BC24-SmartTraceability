@@ -17,20 +17,20 @@ abstract contract ManufacturedProductData is BaseData {
         product.timingInfo.creationDate = block.timestamp;
     }
 
-    function setData(
+    function setManufacturedProductData(
         uint256 tokenId,
         uint256 dateOfManufacturation,
         string memory productName
-    ) public {
+    ) internal {
         ManufacturedProductInfo storage product = _tokenProductData[tokenId];
         product.dateOfManufacturation = dateOfManufacturation;
         product.productName = productName;
         product.timingInfo.lastUpdateDate = block.timestamp;
     }
 
-    function getData(
+    function getManufacturedProductData(
         uint256 tokenId
-    ) public view returns (ManufacturedProductInfo memory) {
+    ) internal view returns (ManufacturedProductInfo memory) {
         return _tokenProductData[tokenId];
     }
 }
