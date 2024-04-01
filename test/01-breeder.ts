@@ -44,8 +44,8 @@ describe("BC24-Breeder", function () {
 
   it("should allow the breeder role to create animal", async function () {
     await expect(await contract.connect(breeder).createAnimal(breeder.address))
-      .to.emit(contract, "AnimalNFTMinted")
-      .withArgs(0);
+      .to.emit(contract, "NFTMinted")
+      .withArgs("AnimalNFT created");
 
     const indexAfterMint = await contract.getTokenIndex();
     expect(indexAfterMint).to.equal(1);
@@ -59,13 +59,13 @@ describe("BC24-Breeder", function () {
 
   it("should mint animal and increment _nextTokenId", async function () {
     await expect(contract.connect(breeder).createAnimal(breeder.address))
-      .to.emit(contract, "AnimalNFTMinted")
-      .withArgs(0);
+      .to.emit(contract, "NFTMinted")
+      .withArgs("AnimalNFT created");
 
     await expect(contract.connect(breeder).createAnimal(breeder.address))
-      .to.emit(contract, "AnimalNFTMinted")
-      .withArgs(1);
-
+      .to.emit(contract, "NFTMinted")
+      .withArgs("AnimalNFT created");
+      
     const indexAfterMint = await contract.getTokenIndex();
     expect(indexAfterMint).to.equal(2);
   });

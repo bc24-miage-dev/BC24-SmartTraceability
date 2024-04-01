@@ -26,7 +26,6 @@ contract TransportData is BaseData {
         transport.duration = duration;
         transport.temperature = temperature;
         transport.humidity = humidity;
-        transport.timingInfo.creationDate = block.timestamp;
         transport.timingInfo.lastUpdateDate = block.timestamp;
     }
 

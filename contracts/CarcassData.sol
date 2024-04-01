@@ -31,7 +31,6 @@ abstract contract CarcassData is BaseData {
         carcass.countryOfSlaughter = countryOfSlaughter;
         carcass.dateOfSlaughter = dateOfSlaughter;
         carcass.carcassWeight = carcassWeight;
-        carcass.timingInfo.creationDate = block.timestamp;
         carcass.timingInfo.lastUpdateDate = block.timestamp;
     }
 

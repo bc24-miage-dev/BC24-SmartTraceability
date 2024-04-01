@@ -11,6 +11,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./AnimalData.sol";
 import "./TransportData.sol";
 import "./CarcassData.sol";
+import "./MeatData.sol";
+import "./ManufacturedProductData.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -21,7 +23,8 @@ contract BC24 is
     UUPSUpgradeable,
     AnimalData,
     TransportData,
-    CarcassData
+    CarcassData,
+    MeatData
 {
     //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -30,6 +33,8 @@ contract BC24 is
     bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
     bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE");
     bytes32 public constant SLAUGHTER_ROLE = keccak256("SLAUGHTER_ROLE");
+    bytes32 public constant MANUFACTURERE_ROLE =
+        keccak256("MANUFACTURERE_ROLE");
 
     // other roles
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
@@ -39,8 +44,7 @@ contract BC24 is
     mapping(uint256 => address) private tokenOwners;
 
     //emits an event when a new token is created
-    event AnimalNFTMinted(uint256 indexed _id);
-    event CarcassNFTCreated(uint256 indexed _id);
+    event NFTMinted(string message);
 
     // emits an event when metadata is changed
     event MetaDataChanged(string _message);
@@ -76,6 +80,14 @@ contract BC24 is
     modifier onlySlaughterRole() {
         require(
             hasRole(SLAUGHTER_ROLE, msg.sender),
+            "Caller is not a slaughterer"
+        );
+        _;
+    }
+
+    modifier onlyManufacturerRole() {
+        require(
+            hasRole(MANUFACTURERE_ROLE, msg.sender),
             "Caller is not a slaughterer"
         );
         _;
@@ -123,6 +135,11 @@ contract BC24 is
             keccak256(abi.encodePacked("SLAUGHTER_ROLE"))
         ) {
             grantRole(SLAUGHTER_ROLE, account);
+        } else if (
+            keccak256(abi.encodePacked(role)) ==
+            keccak256(abi.encodePacked("MANUFACTURERE_ROLE"))
+        ) {
+            grantRole(MANUFACTURERE_ROLE, account);
         } else {
             revert("Invalid role");
         }
@@ -138,7 +155,7 @@ contract BC24 is
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
         _nextTokenId++;
-        emit AnimalNFTMinted(tokenId);
+        emit NFTMinted("AnimalNFT created");
         return tokenId;
     }
 
@@ -152,7 +169,20 @@ contract BC24 is
         CarcassData.createCarcassData(tokenId, animalId);
         tokenOwners[tokenId] = msg.sender;
         _nextTokenId++;
-        emit CarcassNFTCreated(tokenId);
+        emit NFTMinted("CarcassNFT created");
+        return tokenId;
+    }
+
+    function createMeat(
+        uint256 carcassId
+    ) public onlyManufacturerRole onlyTokenOwner(carcassId) returns (uint256) {
+        uint256 tokenId = _nextTokenId;
+        _mint(msg.sender, tokenId, 1, "");
+
+        MeatData.createMeatData(tokenId, carcassId);
+        tokenOwners[tokenId] = msg.sender;
+        _nextTokenId++;
+        emit NFTMinted("MeatNFT created");
         return tokenId;
     }
 
@@ -225,6 +255,27 @@ contract BC24 is
         return "Carcas info added successfully.";
     }
 
+    function updateMeat(
+        uint256 tokenId,
+        string memory agreementNumber,
+        string memory countryOfCutting,
+        uint256 dateOfCutting
+    )
+        public
+        onlyManufacturerRole
+        onlyTokenOwner(tokenId)
+        returns (string memory)
+    {
+        MeatData.setMeat(
+            tokenId,
+            agreementNumber,
+            countryOfCutting,
+            dateOfCutting
+        );
+        emit MetaDataChanged("Meat info added successfully.");
+        return "Meat info added successfully.";
+    }
+
     /* Token Getter functions */
 
     function getAnimal(
@@ -285,6 +336,19 @@ contract BC24 is
     {
         safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
         tokenOwners[tokenId] = transporter;
+    }
+
+    function transferCarcassToManufacturer(
+        uint256 tokenId,
+        address manufacturer
+    )
+        public
+        onlyTransporterRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(MANUFACTURERE_ROLE, manufacturer)
+    {
+        safeTransferFrom(msg.sender, manufacturer, tokenId, 1, "");
+        tokenOwners[tokenId] = manufacturer;
     }
 
     function tester() public pure returns (string memory) {
