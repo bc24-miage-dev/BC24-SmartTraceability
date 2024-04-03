@@ -38,7 +38,7 @@ describe("BC24-Manufacturer", function () {
         await contract.connect(defaultAdmin).grantRoleToAddress(slaughterer.address, "SLAUGHTER_ROLE");
         await contract.connect(defaultAdmin).grantRoleToAddress(manufacturer.address, "MANUFACTURERE_ROLE");
 
-        const transaction = await contract.connect(breeder).createAnimal(breeder.address);
+        const transaction = await contract.connect(breeder).createAnimal(breeder.address,"Cow");
         animalId = transaction.value;
         await contract.connect(breeder).transferAnimalToTransporter(animalId, transporter.address);
         const slaugtherTransaction = await contract.connect(transporter).transferAnimalToSlaugtherer(animalId, slaughterer.address);
@@ -71,8 +71,10 @@ describe("BC24-Manufacturer", function () {
         const agreementNumber = "1111";
         const countryOfCutting = "Schweiz";
         const dateOfCutting = 1622524800;
+        const part = "Tongue";
+        const isContaminated = false
 
-        await expect(await contract.connect(manufacturer).updateMeat(meatId, agreementNumber, countryOfCutting, dateOfCutting)
+        await expect(await contract.connect(manufacturer).updateMeat(meatId, agreementNumber, countryOfCutting, dateOfCutting, part, isContaminated)
         )
             .to.emit(contract, "MetaDataChanged")
             .withArgs("Meat info added successfully.");
@@ -93,8 +95,10 @@ describe("BC24-Manufacturer", function () {
         const agreementNumber = 1;
         const countryOfCutting = "Schweiz";
         const dateOfCutting = 1622524800;
+        const part = "Tongue";
+        const isContaminated = false
 
-        await expect(await contract.connect(manufacturer).updateMeat(meatId, agreementNumber, countryOfCutting, dateOfCutting)
+        await expect(await contract.connect(manufacturer).updateMeat(meatId, agreementNumber, countryOfCutting, dateOfCutting, part, isContaminated)
         )
             .to.emit(contract, "MetaDataChanged")
             .withArgs("Meat info added successfully.");
@@ -118,8 +122,10 @@ describe("BC24-Manufacturer", function () {
 
         const productName = "Schnitzel";
         const dateOfManufacturation = 1622524800;
+        const price = 50;
+        const description = "Schnitzel aus der Schweiz";
 
-        await expect(await contract.connect(manufacturer).updateManufacturedProduct(manufacturedProductId, dateOfManufacturation, productName)
+        await expect(await contract.connect(manufacturer).updateManufacturedProduct(manufacturedProductId, dateOfManufacturation, productName, price, description)
         )
             .to.emit(contract, "MetaDataChanged")
             .withArgs("ManufacturedProduct info added successfully.");

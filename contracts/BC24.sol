@@ -149,10 +149,11 @@ contract BC24 is
     /* Token Creation functions */
 
     function createAnimal(
-        address account
+        address account,
+        string memory animalType
     ) public onlyBreederRole onlyMinterRole returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        AnimalData.createAnimalData(tokenId);
+        AnimalData.createAnimalData(tokenId, animalType);
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
         _nextTokenId++;
@@ -210,7 +211,8 @@ contract BC24 is
         uint256 weight,
         string[] memory sicknessList,
         string[] memory vaccinationList,
-        uint256[] memory foodList
+        uint256[] memory foodList,
+        bool isContaminated
     ) public onlyBreederRole onlyTokenOwner(tokenId) returns (string memory) {
         AnimalData.setAnimalData(
             tokenId,
@@ -220,7 +222,8 @@ contract BC24 is
             weight,
             sicknessList,
             vaccinationList,
-            foodList
+            foodList,
+            isContaminated
         );
 
         emit MetaDataChanged("Breeding info added successfully.");
@@ -232,7 +235,8 @@ contract BC24 is
         uint256 tokenId,
         uint256 duration,
         uint256 temperature,
-        uint256 humidity
+        uint256 humidity,
+        bool isContaminated
     )
         public
         onlyTransporterRole
@@ -243,7 +247,8 @@ contract BC24 is
             tokenId,
             duration,
             temperature,
-            humidity
+            humidity,
+            isContaminated
         );
         emit MetaDataChanged("Transport info added successfully.");
         return "Transport info added successfully.";
@@ -254,14 +259,16 @@ contract BC24 is
         string memory agreementNumber,
         string memory countryOfSlaughter,
         uint256 dateOfSlaughter,
-        uint256 carcassWeight
+        uint256 carcassWeight,
+        bool isContaminated
     ) public onlySlaughterRole onlyTokenOwner(tokenId) returns (string memory) {
         CarcassData.setCarcassData(
             tokenId,
             agreementNumber,
             countryOfSlaughter,
             dateOfSlaughter,
-            carcassWeight
+            carcassWeight,
+            isContaminated
         );
 
         emit MetaDataChanged("Carcas info added successfully.");
@@ -273,7 +280,9 @@ contract BC24 is
         uint256 tokenId,
         string memory agreementNumber,
         string memory countryOfCutting,
-        uint256 dateOfCutting
+        uint256 dateOfCutting,
+        string memory part,
+        bool isContaminated
     )
         public
         onlyManufacturerRole
@@ -284,7 +293,9 @@ contract BC24 is
             tokenId,
             agreementNumber,
             countryOfCutting,
-            dateOfCutting
+            dateOfCutting,
+            part,
+            isContaminated
         );
         emit MetaDataChanged("Meat info added successfully.");
         return "Meat info added successfully.";
@@ -293,7 +304,9 @@ contract BC24 is
     function updateManufacturedProduct(
         uint256 tokenId,
         uint256 dateOfManufacturation,
-        string memory productName
+        string memory productName,
+        uint256 price,
+        string memory description
     )
         public
         onlyManufacturerRole
@@ -303,7 +316,9 @@ contract BC24 is
         ManufacturedProductData.setManufacturedProductData(
             tokenId,
             dateOfManufacturation,
-            productName
+            productName,
+            price,
+            description
         );
         emit MetaDataChanged("ManufacturedProduct info added successfully.");
         return "ManufacturedProduct info added successfully.";

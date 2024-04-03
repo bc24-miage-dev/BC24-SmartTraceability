@@ -33,7 +33,7 @@ describe("BC24-Carcass", function () {
         await contract.connect(defaultAdmin).grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
         await contract.connect(defaultAdmin).grantRoleToAddress(slaughterer.address, "SLAUGHTER_ROLE");
 
-        const transaction = await contract.connect(breeder).createAnimal(breeder.address);
+        const transaction = await contract.connect(breeder).createAnimal(breeder.address, "Cow");
         animalId = transaction.value;
         await contract.connect(breeder).transferAnimalToTransporter(animalId, transporter.address);
         await contract.connect(transporter).transferAnimalToSlaugtherer(animalId, slaughterer.address);
@@ -47,14 +47,16 @@ describe("BC24-Carcass", function () {
 
     it("should make sure the animal is still alive", async function () {
         const animal = await contract.connect(slaughterer).getAnimal(animalId)
-        expect(await animal.isDead).to.equal(false)
+
+        console.log(animal)
+        expect(await animal.isLifeCycleOver).to.equal(false)
     });
 
     it("should create a new carcassNFT which is connected to the now dead animal", async function () {
         const transaction = await contract.connect(slaughterer).slaughterAnimal(animalId)
 
         const animal = await contract.connect(slaughterer).getAnimal(animalId)
-        expect(await animal.isDead).to.equal(true)
+        expect(await animal.isLifeCycleOver).to.equal(true)
 
         const carcassId = transaction.value
         const cascas = await contract.connect(slaughterer).getCarcass(carcassId)
@@ -72,7 +74,7 @@ describe("BC24-Carcass", function () {
         const transaction = await contract.connect(slaughterer).slaughterAnimal(animalId)
 
         const animal = await contract.connect(slaughterer).getAnimal(animalId)
-        expect(await animal.isDead).to.equal(true)
+        expect(await animal.isLifeCycleOver).to.equal(true)
 
         const carcassId = transaction.value
 
@@ -80,8 +82,9 @@ describe("BC24-Carcass", function () {
         const countryOfSlaughter = "Country";
         const dateOfSlaughter = Math.floor(Date.now() / 1000);
         const carcassWeight = 100;
+        const isContaminated = false;
 
-        await contract.connect(slaughterer).updateCarcass(carcassId, agreementNumber, countryOfSlaughter, dateOfSlaughter, carcassWeight);
+        await contract.connect(slaughterer).updateCarcass(carcassId, agreementNumber, countryOfSlaughter, dateOfSlaughter, carcassWeight, isContaminated);
 
         const carcassInfo = await contract.connect(slaughterer).getCarcass(carcassId);
 
@@ -96,7 +99,7 @@ describe("BC24-Carcass", function () {
         const transaction = await contract.connect(slaughterer).slaughterAnimal(animalId)
 
         const animal = await contract.connect(slaughterer).getAnimal(animalId)
-        expect(await animal.isDead).to.equal(true)
+        expect(await animal.isLifeCycleOver).to.equal(true)
 
         const carcassId = transaction.value
 
@@ -104,8 +107,10 @@ describe("BC24-Carcass", function () {
         const countryOfSlaughter = "Country";
         const dateOfSlaughter = Math.floor(Date.now() / 1000);
         const carcassWeight = 100;
+        const isContaminated = false;
 
-        await expect(contract.connect(breeder).updateCarcass(carcassId, agreementNumber, countryOfSlaughter, dateOfSlaughter, carcassWeight)).to.revertedWith("Caller is not a slaughterer");
+        await expect(contract.connect(breeder).updateCarcass(carcassId, agreementNumber, countryOfSlaughter, dateOfSlaughter, carcassWeight, isContaminated))
+            .to.revertedWith("Caller is not a slaughterer");
 
     });
 

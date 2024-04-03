@@ -40,7 +40,7 @@ describe("BC24-Transporter", function () {
         await contract.connect(defaultAdmin).grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
         await contract.connect(defaultAdmin).grantRoleToAddress(slaughterer.address, "SLAUGHTER_ROLE");
 
-        const transaction = await contract.connect(breeder).createAnimal(breeder.address);
+        const transaction = await contract.connect(breeder).createAnimal(breeder.address, "Cow");
         animalId = transaction.value;
         await contract.connect(breeder).transferAnimalToTransporter(animalId, transporter.address);
 
@@ -57,8 +57,9 @@ describe("BC24-Transporter", function () {
         const duration = 1000;
         const temperature = 25;
         const humidity = 50;
+        const isContaminated = false;
 
-        await expect(await contract.connect(transporter).updateTransport(animalId, duration, temperature, humidity)
+        await expect(await contract.connect(transporter).updateTransport(animalId, duration, temperature, humidity, isContaminated)
         )
             .to.emit(contract, "MetaDataChanged")
             .withArgs("Transport info added successfully.");
@@ -79,8 +80,9 @@ describe("BC24-Transporter", function () {
         const sicknessList: [] = []; // Empty list
         const vaccinationList: [] = []; // Empty list
         const foodList: [] = []; // Empty list
+        const isContaminated = false;
 
-        await expect(contract.connect(transporter).updateAnimal(animalId, placeOfOrigin, dateOfBirth, gender, weight, sicknessList, vaccinationList, foodList)
+        await expect(contract.connect(transporter).updateAnimal(animalId, placeOfOrigin, dateOfBirth, gender, weight, sicknessList, vaccinationList, foodList, isContaminated)
         ).to.be.revertedWith("Caller is not a breeder")
     });
 
@@ -101,8 +103,9 @@ describe("BC24-Transporter", function () {
         const countryOfSlaughter = "Country";
         const dateOfSlaughter = Math.floor(Date.now() / 1000);
         const carcassWeight = 100;
+        const isContaminated = false;
 
-        await expect(contract.connect(transporter).updateCarcass(carcassId, agreementNumber, countryOfSlaughter, dateOfSlaughter, carcassWeight)).to.revertedWith("Caller is not a slaughterer");
+        await expect(contract.connect(transporter).updateCarcass(carcassId, agreementNumber, countryOfSlaughter, dateOfSlaughter, carcassWeight, isContaminated)).to.revertedWith("Caller is not a slaughterer");
     });
 
 
