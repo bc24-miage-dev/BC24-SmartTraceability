@@ -7,18 +7,31 @@ contract AnimalData is BaseData {
         uint256 dateOfBirth;
         string gender;
         uint256 weight;
-        string[] sicknessList;
-        string[] vaccinationList;
-        uint256[] foodList;
-        // for for dates
         TimingInfo timingInfo;
-        //string typeOfAnimal;
         bool isLifeCycleOver;
         string category;
         string animalType;
         bool isContaminated;
+        Sickness[] sicknessList;
+        Vaccine[] vaccinationList;
+        Food[] foodList;
     }
-
+    struct Sickness {
+        string sickness;
+        TimingInfo date;
+    }
+    
+    struct Vaccine {
+        string vaccine;
+        TimingInfo date;
+    }
+    
+    struct Food {
+        string foodname;
+        uint256 quantity;
+        TimingInfo date;
+    }
+    
     mapping(uint256 => AnimalInfo) private _tokenAnimalData;
 
     function createAnimalData(uint256 tokenId, string memory name) internal {
@@ -35,9 +48,9 @@ contract AnimalData is BaseData {
         uint256 dateOfBirth,
         string memory gender,
         uint256 weight,
-        string[] memory sicknessList,
-        string[] memory vaccinationList,
-        uint256[] memory foodList,
+        Sickness[] memory sicknessList,
+        Vaccine[] memory vaccinationList,
+        Food[] memory foodList,
         bool isContaminated
     ) internal {
         AnimalInfo storage animal = _tokenAnimalData[tokenId];
