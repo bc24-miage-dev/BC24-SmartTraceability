@@ -209,9 +209,9 @@ contract BC24 is
         uint256 dateOfBirth,
         string memory gender,
         uint256 weight,
-        string[] memory sicknessList,
-        string[] memory vaccinationList,
-        uint256[] memory foodList,
+        Sickness[] memory sicknessList,
+        Vaccine[] memory vaccinationList,
+        Food[] memory foodList,
         bool isContaminated
     ) public onlyBreederRole onlyTokenOwner(tokenId) returns (string memory) {
         AnimalData.setAnimalData(
