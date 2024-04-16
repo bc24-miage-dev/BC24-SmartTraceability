@@ -16,7 +16,7 @@ contract AnimalData is BaseData {
         Vaccine[] vaccinationList;
         Food[] foodList;
     }
-    
+
     struct Sickness {
         string sickness;
         TimingInfo date;
