@@ -7,33 +7,39 @@ abstract contract MeatData is BaseData {
         string countryOfCutting;
         uint256 dateOfCutting;
         TimingInfo timingInfo;
-        uint256 carcassInfoId;
+        uint256 carcassId;
+        string category;
+        string part;
+        bool isContaminated;
     }
 
     mapping(uint256 => MeatInfo) private _tokenMeatData;
 
-    function createMeatData(uint256 tokenId) internal {
+    function createMeatData(uint256 tokenId, uint256 carcassId) internal {
         MeatInfo storage meat = _tokenMeatData[tokenId];
+        meat.carcassId = carcassId;
         meat.timingInfo.creationDate = block.timestamp;
+        meat.category = "Meat"; 
     }
 
-    function setData(
+    function setMeatData(
         uint256 tokenId,
         string memory agreementNumber,
         string memory countryOfCutting,
         uint256 dateOfCutting,
-        uint256 carcassInfoId
-    ) public {
+        string memory part,
+        bool isContaminated
+    ) internal {
         MeatInfo storage meat = _tokenMeatData[tokenId];
         meat.agreementNumber = agreementNumber;
         meat.countryOfCutting = countryOfCutting;
         meat.dateOfCutting = dateOfCutting;
-        meat.carcassInfoId = carcassInfoId;
-        meat.timingInfo.creationDate = block.timestamp;
+        meat.part = part;
         meat.timingInfo.lastUpdateDate = block.timestamp;
+        meat.isContaminated = isContaminated;
     }
 
-    function getData(uint256 tokenId) public view returns (MeatInfo memory) {
+    function getMeatData(uint256 tokenId) internal view returns (MeatInfo memory) {
         return _tokenMeatData[tokenId];
     }
 }

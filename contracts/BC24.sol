@@ -10,6 +10,9 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./AnimalData.sol";
 import "./TransportData.sol";
+import "./CarcassData.sol";
+import "./MeatData.sol";
+import "./ManufacturedProductData.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -19,14 +22,28 @@ contract BC24 is
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
     AnimalData,
-    TransportData
+    TransportData,
+    CarcassData,
+    MeatData,
+    ManufacturedProductData
 {
+    enum DataType {
+        Animal,
+        Carcass,
+        Transport,
+        Meat,
+        ManufacturedProduct
+    }
+
     //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     // specific roles
     bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
     bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE");
+    bytes32 public constant SLAUGHTER_ROLE = keccak256("SLAUGHTER_ROLE");
+    bytes32 public constant MANUFACTURERE_ROLE =
+        keccak256("MANUFACTURERE_ROLE");
 
     // other roles
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
@@ -35,8 +52,12 @@ contract BC24 is
     uint256 private _nextTokenId;
     mapping(uint256 => address) private tokenOwners;
 
+    // Add this to your contract
+
+    mapping(uint256 => DataType) public tokenDataTypes;
+
     //emits an event when a new token is created
-    event AnimalNFTMinted(uint256 indexed _id);
+    event NFTMinted(string message);
 
     // emits an event when metadata is changed
     event MetaDataChanged(string _message);
@@ -65,6 +86,22 @@ contract BC24 is
         require(
             hasRole(TRANSPORTER_ROLE, msg.sender),
             "Caller is not a transporter"
+        );
+        _;
+    }
+
+    modifier onlySlaughterRole() {
+        require(
+            hasRole(SLAUGHTER_ROLE, msg.sender),
+            "Caller is not a slaughterer"
+        );
+        _;
+    }
+
+    modifier onlyManufacturerRole() {
+        require(
+            hasRole(MANUFACTURERE_ROLE, msg.sender),
+            "Caller is not a slaughterer"
         );
         _;
     }
@@ -106,22 +143,83 @@ contract BC24 is
             keccak256(abi.encodePacked("TRANSPORTER_ROLE"))
         ) {
             grantRole(TRANSPORTER_ROLE, account);
+        } else if (
+            keccak256(abi.encodePacked(role)) ==
+            keccak256(abi.encodePacked("SLAUGHTER_ROLE"))
+        ) {
+            grantRole(SLAUGHTER_ROLE, account);
+        } else if (
+            keccak256(abi.encodePacked(role)) ==
+            keccak256(abi.encodePacked("MANUFACTURERE_ROLE"))
+        ) {
+            grantRole(MANUFACTURERE_ROLE, account);
         } else {
             revert("Invalid role");
         }
     }
 
+    /* Token Creation functions */
+
     function createAnimal(
-        address account
+        address account,
+        string memory animalType,
+        uint256 weight,
+        string memory gender
     ) public onlyBreederRole onlyMinterRole returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        AnimalData.createAnimalData(tokenId);
+        AnimalData.createAnimalData(tokenId, animalType, weight, gender);
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.Animal;
         _nextTokenId++;
-        emit AnimalNFTMinted(tokenId);
+        emit NFTMinted("AnimalNFT created");
         return tokenId;
     }
+
+    function slaughterAnimal(
+        uint256 animalId
+    ) public onlySlaughterRole onlyTokenOwner(animalId) returns (uint256) {
+        AnimalData.killAnimal(animalId);
+
+        uint256 tokenId = _nextTokenId;
+        _mint(msg.sender, tokenId, 1, "");
+        CarcassData.createCarcassData(tokenId, animalId);
+        tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.Carcass;
+        _nextTokenId++;
+        emit NFTMinted("CarcassNFT created");
+        return tokenId;
+    }
+
+    function createMeat(
+        uint256 carcassId
+    ) public onlyManufacturerRole onlyTokenOwner(carcassId) returns (uint256) {
+        uint256 tokenId = _nextTokenId;
+        _mint(msg.sender, tokenId, 1, "");
+
+        MeatData.createMeatData(tokenId, carcassId);
+        tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.Meat;
+        _nextTokenId++;
+        emit NFTMinted("MeatNFT created");
+        return tokenId;
+    }
+
+    function createManufacturedProduct(
+        uint256 meatId
+    ) public onlyManufacturerRole onlyTokenOwner(meatId) returns (uint256) {
+        uint256 tokenId = _nextTokenId;
+        _mint(msg.sender, tokenId, 1, "");
+
+        ManufacturedProductData.createProductData(tokenId, meatId);
+        tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.ManufacturedProduct;
+        _nextTokenId++;
+        emit NFTMinted("ManufacturedProduct created");
+        return tokenId;
+    }
+
+    /* Token Update functions */
 
     function updateAnimal(
         uint256 tokenId,
@@ -131,7 +229,8 @@ contract BC24 is
         uint256 weight,
         string[] memory sicknessList,
         string[] memory vaccinationList,
-        uint256[] memory foodList
+        uint256[] memory foodList,
+        bool isContaminated
     ) public onlyBreederRole onlyTokenOwner(tokenId) returns (string memory) {
         AnimalData.setAnimalData(
             tokenId,
@@ -141,7 +240,8 @@ contract BC24 is
             weight,
             sicknessList,
             vaccinationList,
-            foodList
+            foodList,
+            isContaminated
         );
 
         emit MetaDataChanged("Breeding info added successfully.");
@@ -149,31 +249,12 @@ contract BC24 is
         return "Breeding info added successfully.";
     }
 
-    function getAnimal(
-        uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (AnimalInfo memory) {
-        return AnimalData.getAnimalData(tokenId);
-    }
-
-    function giveAnimalToTransporter(
-        uint256 tokenId,
-        address newOwner
-    )
-        public
-        onlyBreederRole
-        onlyTokenOwner(tokenId)
-        receiverOnlyRole(TRANSPORTER_ROLE, newOwner)
-    {
-        safeTransferFrom(msg.sender, newOwner, tokenId, 1, "");
-        tokenOwners[tokenId] = newOwner;
-        TransportData.createTransportData(tokenId);
-    }
-
     function updateTransport(
         uint256 tokenId,
         uint256 duration,
         uint256 temperature,
-        uint256 humidity
+        uint256 humidity,
+        bool isContaminated
     )
         public
         onlyTransporterRole
@@ -184,16 +265,173 @@ contract BC24 is
             tokenId,
             duration,
             temperature,
-            humidity
+            humidity,
+            isContaminated
         );
         emit MetaDataChanged("Transport info added successfully.");
         return "Transport info added successfully.";
+    }
+
+    function updateCarcass(
+        uint256 tokenId,
+        string memory agreementNumber,
+        string memory countryOfSlaughter,
+        uint256 dateOfSlaughter,
+        uint256 carcassWeight,
+        bool isContaminated
+    ) public onlySlaughterRole onlyTokenOwner(tokenId) returns (string memory) {
+        CarcassData.setCarcassData(
+            tokenId,
+            agreementNumber,
+            countryOfSlaughter,
+            dateOfSlaughter,
+            carcassWeight,
+            isContaminated
+        );
+
+        emit MetaDataChanged("Carcas info added successfully.");
+
+        return "Carcas info added successfully.";
+    }
+
+    function updateMeat(
+        uint256 tokenId,
+        string memory agreementNumber,
+        string memory countryOfCutting,
+        uint256 dateOfCutting,
+        string memory part,
+        bool isContaminated
+    )
+        public
+        onlyManufacturerRole
+        onlyTokenOwner(tokenId)
+        returns (string memory)
+    {
+        MeatData.setMeatData(
+            tokenId,
+            agreementNumber,
+            countryOfCutting,
+            dateOfCutting,
+            part,
+            isContaminated
+        );
+        emit MetaDataChanged("Meat info added successfully.");
+        return "Meat info added successfully.";
+    }
+
+    function updateManufacturedProduct(
+        uint256 tokenId,
+        uint256 dateOfManufacturation,
+        string memory productName,
+        uint256 price,
+        string memory description
+    )
+        public
+        onlyManufacturerRole
+        onlyTokenOwner(tokenId)
+        returns (string memory)
+    {
+        ManufacturedProductData.setManufacturedProductData(
+            tokenId,
+            dateOfManufacturation,
+            productName,
+            price,
+            description
+        );
+        emit MetaDataChanged("ManufacturedProduct info added successfully.");
+        return "ManufacturedProduct info added successfully.";
+    }
+
+    /* Token Getter functions */
+
+    function getAnimal(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (AnimalInfo memory) {
+        return AnimalData.getAnimalData(tokenId);
+    }
+
+    function getCarcass(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (CarcassInfo memory) {
+        return CarcassData.getCarcassData(tokenId);
     }
 
     function getTransport(
         uint256 tokenId
     ) public view onlyTokenOwner(tokenId) returns (TransportInfo memory) {
         return TransportData.getTransportData(tokenId);
+    }
+
+    function getMeat(
+        uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (MeatInfo memory) {
+        return MeatData.getMeatData(tokenId);
+    }
+
+    function getManufacturedProduct(
+        uint256 tokenId
+    )
+        public
+        view
+        onlyTokenOwner(tokenId)
+        returns (ManufacturedProductInfo memory)
+    {
+        return ManufacturedProductData.getManufacturedProductData(tokenId);
+    }
+
+    /* Token Transfer functions */
+
+    function transferAnimalToTransporter(
+        uint256 tokenId,
+        address transporter
+    )
+        public
+        onlyBreederRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
+    {
+        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
+        tokenOwners[tokenId] = transporter;
+        TransportData.createTransportData(tokenId);
+    }
+
+    function transferAnimalToSlaugtherer(
+        uint256 tokenId,
+        address slaughterer
+    )
+        public
+        onlyTransporterRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(SLAUGHTER_ROLE, slaughterer)
+    {
+        safeTransferFrom(msg.sender, slaughterer, tokenId, 1, "");
+        tokenOwners[tokenId] = slaughterer;
+    }
+
+    function transferCarcassToTransporter(
+        uint256 tokenId,
+        address transporter
+    )
+        public
+        onlySlaughterRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
+    {
+        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
+        tokenOwners[tokenId] = transporter;
+    }
+
+    function transferCarcassToManufacturer(
+        uint256 tokenId,
+        address manufacturer
+    )
+        public
+        onlyTransporterRole
+        onlyTokenOwner(tokenId)
+        receiverOnlyRole(MANUFACTURERE_ROLE, manufacturer)
+    {
+        safeTransferFrom(msg.sender, manufacturer, tokenId, 1, "");
+        tokenOwners[tokenId] = manufacturer;
     }
 
     function tester() public pure returns (string memory) {
@@ -238,5 +476,79 @@ contract BC24 is
 
     function ownerOf(uint256 tokenId) public view returns (address) {
         return tokenOwners[tokenId];
+    }
+
+    function getTokensOfOwner() public view returns (uint256[] memory) {
+        uint256[] memory result = new uint256[](_nextTokenId);
+        uint256 counter = 0;
+        for (uint256 i = 0; i < _nextTokenId; i++) {
+            if (tokenOwners[i] == msg.sender) {
+                result[counter] = i;
+                counter++;
+            }
+        }
+        // resize the array
+        uint256[] memory finalResult = new uint256[](counter);
+        for (uint256 i = 0; i < counter; i++) {
+            finalResult[i] = result[i];
+        }
+        return finalResult;
+    }
+
+    function getTokenDataType(uint256 tokenId) public view returns (DataType) {
+        return tokenDataTypes[tokenId];
+    }
+
+    function getTokensByDataType(
+        string memory _dataType
+    ) public view returns (uint256[] memory) {
+        DataType dataType = stringToDataType(_dataType);
+        uint256[] memory result = new uint256[](_nextTokenId);
+        uint256 counter = 0;
+        for (uint256 i = 0; i < _nextTokenId; i++) {
+            if (tokenDataTypes[i] == dataType) {
+                result[counter] = i;
+                counter++;
+            }
+        }
+        // resize the array
+        uint256[] memory finalResult = new uint256[](counter);
+        for (uint256 i = 0; i < counter; i++) {
+            finalResult[i] = result[i];
+        }
+        return finalResult;
+    }
+
+    function stringToDataType(
+        string memory dataType
+    ) public pure returns (DataType) {
+        if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Animal")))
+        ) {
+            return DataType.Animal;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Carcass")))
+        ) {
+            return DataType.Carcass;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Transport")))
+        ) {
+            return DataType.Transport;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Meat")))
+        ) {
+            return DataType.Meat;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("ManufacturedProduct")))
+        ) {
+            return DataType.ManufacturedProduct;
+        } else {
+            revert("Invalid data type");
+        }
     }
 }

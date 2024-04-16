@@ -13,13 +13,27 @@ contract AnimalData is BaseData {
         // for for dates
         TimingInfo timingInfo;
         //string typeOfAnimal;
+        bool isLifeCycleOver;
+        string category;
+        string animalType;
+        bool isContaminated;
     }
 
     mapping(uint256 => AnimalInfo) private _tokenAnimalData;
 
-    function createAnimalData(uint256 tokenId) internal {
+    function createAnimalData(
+        uint256 tokenId,
+        string memory animalType,
+        uint256 weight,
+        string memory gender
+    ) internal {
         AnimalInfo storage animalInfo = _tokenAnimalData[tokenId];
         animalInfo.timingInfo.creationDate = block.timestamp;
+        animalInfo.category = "Animal";
+        animalInfo.isLifeCycleOver = false;
+        animalInfo.animalType = animalType;
+        animalInfo.weight = weight;
+        animalInfo.gender = gender;
     }
 
     function setAnimalData(
@@ -30,7 +44,8 @@ contract AnimalData is BaseData {
         uint256 weight,
         string[] memory sicknessList,
         string[] memory vaccinationList,
-        uint256[] memory foodList
+        uint256[] memory foodList,
+        bool isContaminated
     ) internal {
         AnimalInfo storage animal = _tokenAnimalData[tokenId];
         animal.placeOfOrigin = placeOfOrigin;
@@ -40,6 +55,8 @@ contract AnimalData is BaseData {
         animal.sicknessList = sicknessList;
         animal.vaccinationList = vaccinationList;
         animal.foodList = foodList;
+        animal.isContaminated = isContaminated;
+
         animal.timingInfo.lastUpdateDate = block.timestamp;
 
         _tokenAnimalData[tokenId] = animal;
@@ -49,5 +66,14 @@ contract AnimalData is BaseData {
         uint256 tokenId
     ) public view virtual returns (AnimalInfo memory) {
         return _tokenAnimalData[tokenId];
+    }
+
+    function killAnimal(uint256 animalId) internal {
+        AnimalInfo storage animal = _tokenAnimalData[animalId];
+        require(
+            animal.isLifeCycleOver == false,
+            "Animal already has been slaughtered"
+        );
+        animal.isLifeCycleOver = true;
     }
 }

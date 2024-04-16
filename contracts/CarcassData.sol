@@ -8,35 +8,49 @@ abstract contract CarcassData is BaseData {
         uint256 dateOfSlaughter;
         uint256 carcassWeight;
         TimingInfo timingInfo;
-        uint256 animalInfoId;
+        uint256 animalId;
+        string category;
+        bool isContaminated;
     }
 
-    mapping(uint256 => CarcassInfo) private _tokenCarcassData;
+    mapping(uint256 => CarcassInfo) private _tokenCarcassData;      
 
-    function createCarcassData(uint256 tokenId) internal {
+    function createCarcassData(uint256 tokenId, uint256 animalId) internal {
         CarcassInfo storage carcass = _tokenCarcassData[tokenId];
         carcass.timingInfo.creationDate = block.timestamp;
+        carcass.animalId = animalId;
+        carcass.category = "Carcass";
     }
 
-    function setData(
+    function setCarcassData(
         uint256 tokenId,
         string memory agreementNumber,
         string memory countryOfSlaughter,
         uint256 dateOfSlaughter,
         uint256 carcassWeight,
-        uint256 animalInfoId
-    ) public {
+        bool isContaminated
+    ) internal {
         CarcassInfo storage carcass = _tokenCarcassData[tokenId];
         carcass.agreementNumber = agreementNumber;
         carcass.countryOfSlaughter = countryOfSlaughter;
         carcass.dateOfSlaughter = dateOfSlaughter;
         carcass.carcassWeight = carcassWeight;
-        carcass.animalInfoId = animalInfoId;
-        carcass.timingInfo.creationDate = block.timestamp;
+        carcass.isContaminated = isContaminated;
         carcass.timingInfo.lastUpdateDate = block.timestamp;
     }
 
-    function getData(uint256 tokenId) public view returns (CarcassInfo memory) {
+    function getCarcassData(
+        uint256 tokenId
+    ) internal view returns (CarcassInfo memory) {
         return _tokenCarcassData[tokenId];
+    }
+
+    function createDemiCarcass(
+        uint256 tokenId,
+        uint256 demiCarcassAWeight,
+        uint256 demiCarcassBWeight,
+        uint256 carcassId
+    ) internal {
+        // needs more details
     }
 }
