@@ -2,8 +2,8 @@ import { expect, assert } from "chai";
 import { ethers, upgrades } from "hardhat";
 
 describe("BC24-Breeder", function () {
-  let defaultAdmin: { address: unknown; };
-  let minter: { address: unknown; };
+  let defaultAdmin: { address: unknown };
+  let minter: { address: unknown };
   let random: any;
   let breeder: any;
   let transporter: any;
@@ -18,7 +18,7 @@ describe("BC24-Breeder", function () {
     transporter = (await ethers.getSigners())[4];
 
     contract = await upgrades.deployProxy(ContractFactory, [
-      defaultAdmin.address
+      defaultAdmin.address,
       /*       minter.address,
             defaultAdmin.address,
             defaultAdmin.address, */
@@ -27,23 +27,76 @@ describe("BC24-Breeder", function () {
     await contract.waitForDeployment();
 
     // grant the roles
-    await contract.connect(defaultAdmin).grantRoleToAddress(minter.address, "MINTER_ROLE");
+    await contract
+      .connect(defaultAdmin)
+      .grantRoleToAddress(minter.address, "MINTER_ROLE");
 
-    await contract.connect(defaultAdmin).grantRoleToAddress(breeder.address, "BREEDER_ROLE");
-    await contract.connect(defaultAdmin).grantRoleToAddress(breeder.address, "MINTER_ROLE");
+    await contract
+      .connect(defaultAdmin)
+      .grantRoleToAddress(breeder.address, "BREEDER_ROLE");
+    await contract
+      .connect(defaultAdmin)
+      .grantRoleToAddress(breeder.address, "MINTER_ROLE");
 
-    await contract.connect(defaultAdmin).grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
+    await contract
+      .connect(defaultAdmin)
+      .grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
 
+    await contract
+      .connect(defaultAdmin)
+      .grantRoleToAddress(transporter.address, "BREEDER_ROLE");
 
+    await contract
+      .connect(defaultAdmin)
+      .grantRoleToAddress(transporter.address, "MINTER_ROLE");
+  });
 
+  it("Test nft content", async function () {
+    const nft = await contract
+      .connect(breeder)
+      .createAnimal(breeder.address, "Cow", 10, "male");
+
+    await contract
+      .connect(transporter)
+      .createAnimal(breeder.address, "Cow", 10, "female");
+
+    await contract
+      .connect(breeder)
+      .createAnimal(breeder.address, "Cow", 20, "male");
+
+    const nfts = await contract.connect(breeder).getTokensOfOwner();
+
+    // console.log(nfts);
+
+    //console.log(await contract.connect(transporter).getTokensOfOwner());
+  });
+
+  it("Test filter", async function () {
+    const nft = await contract
+      .connect(breeder)
+      .createAnimal(breeder.address, "Cow", 10, "male");
+
+    const nft1 = await contract
+      .connect(breeder)
+      .createAnimal(breeder.address, "Cow", 10, "male");
+
+    const provider = ethers.provider;
+    const currentBlockNumber = await provider.getBlockNumber();
+
+    // console.log(await provider.getTransaction(nft1.hash));
+    //console.log(await contract.getTokensByDataType("Carcass"))
   });
 
   it("Test contract", async function () {
     expect(await contract.uri(0)).to.equal("");
-  })
+  });
 
   it("should allow the breeder role to create animal", async function () {
-    await expect(await contract.connect(breeder).createAnimal(breeder.address, "Cow"))
+    await expect(
+      await contract
+        .connect(breeder)
+        .createAnimal(breeder.address, "Cow", 10, "male")
+    )
       .to.emit(contract, "NFTMinted")
       .withArgs("AnimalNFT created");
 
@@ -53,16 +106,22 @@ describe("BC24-Breeder", function () {
 
   it("should throw when others than breeder try to create animal", async function () {
     await expect(
-      contract.connect(defaultAdmin).createAnimal(defaultAdmin.address, "Cow")
+      contract
+        .connect(defaultAdmin)
+        .createAnimal(defaultAdmin.address, "Cow", 10, "male")
     ).to.be.revertedWith("Caller is not a breeder");
   });
 
   it("should mint animal and increment _nextTokenId", async function () {
-    await expect(contract.connect(breeder).createAnimal(breeder.address, "Cow"))
+    await expect(
+      contract.connect(breeder).createAnimal(breeder.address, "Cow", 10, "male")
+    )
       .to.emit(contract, "NFTMinted")
       .withArgs("AnimalNFT created");
 
-    await expect(contract.connect(breeder).createAnimal(breeder.address, "Cow"))
+    await expect(
+      contract.connect(breeder).createAnimal(breeder.address, "Cow", 10, "male")
+    )
       .to.emit(contract, "NFTMinted")
       .withArgs("AnimalNFT created");
 
@@ -71,7 +130,9 @@ describe("BC24-Breeder", function () {
   });
 
   it("should create an animal successfully", async () => {
-    await contract.connect(breeder).createAnimal(breeder.address, "Cow");
+    await contract
+      .connect(breeder)
+      .createAnimal(breeder.address, "Cow", 10, "male");
 
     // Create some sample data
     const placeOfOrigin = "Farm XYZ";
@@ -81,10 +142,22 @@ describe("BC24-Breeder", function () {
     const sicknessList: [] = []; // Empty list
     const vaccinationList: [] = []; // Empty list
     const foodList: [] = []; // Empty lis
-    const isContaminated = false
+    const isContaminated = false;
 
-
-    await expect(await contract.connect(breeder).updateAnimal(0, placeOfOrigin, dateOfBirth, gender, weight, sicknessList, vaccinationList, foodList, isContaminated)
+    await expect(
+      await contract
+        .connect(breeder)
+        .updateAnimal(
+          0,
+          placeOfOrigin,
+          dateOfBirth,
+          gender,
+          weight,
+          sicknessList,
+          vaccinationList,
+          foodList,
+          isContaminated
+        )
     )
       .to.emit(contract, "MetaDataChanged")
       .withArgs("Breeding info added successfully.");
@@ -97,10 +170,11 @@ describe("BC24-Breeder", function () {
     expect(animalData.sicknessList).to.deep.equal(sicknessList);
     expect(animalData.vaccinationList).to.deep.equal(vaccinationList);
     expect(animalData.foodList).to.deep.equal(foodList);
-
   });
   it("should not be able to set animalData of another breeder", async () => {
-    await contract.connect(breeder).createAnimal(breeder.address, "Cow");
+    await contract
+      .connect(breeder)
+      .createAnimal(breeder.address, "Cow", 10, "male");
 
     // Create some sample data
     const placeOfOrigin = "Farm XYZ";
@@ -112,24 +186,44 @@ describe("BC24-Breeder", function () {
     const foodList: [] = []; // Empty lis
     const isContaminated = false;
 
-    await contract.connect(defaultAdmin).grantRoleToAddress(random.address, "BREEDER_ROLE");
+    await contract
+      .connect(defaultAdmin)
+      .grantRoleToAddress(random.address, "BREEDER_ROLE");
 
-    await expect(contract.connect(random).updateAnimal(0, placeOfOrigin, dateOfBirth, gender, weight, sicknessList, vaccinationList, foodList,isContaminated)
-    ).to.be.revertedWith("Caller does not own this token")
+    await expect(
+      contract
+        .connect(random)
+        .updateAnimal(
+          0,
+          placeOfOrigin,
+          dateOfBirth,
+          gender,
+          weight,
+          sicknessList,
+          vaccinationList,
+          foodList,
+          isContaminated
+        )
+    ).to.be.revertedWith("Caller does not own this token");
   });
 
   it("should transfer animal to transporter", async function () {
-    await contract.connect(breeder).createAnimal(breeder.address, "Cow");
+    await contract
+      .connect(breeder)
+      .createAnimal(breeder.address, "Cow", 10, "male");
 
-    await expect(contract.connect(transporter).getAnimal(0)
-    ).to.be.revertedWith("Caller does not own this token")
+    await expect(contract.connect(transporter).getAnimal(0)).to.be.revertedWith(
+      "Caller does not own this token"
+    );
 
     await contract.connect(breeder).transferAnimalToTransporter(0, transporter.address);
 
-    await expect(contract.connect(breeder).getAnimal(0)
-    ).to.be.revertedWith("Caller does not own this token")
+    await expect(contract.connect(breeder).getAnimal(0)).to.be.revertedWith(
+      "Caller does not own this token"
+    );
 
-    expect(await contract.connect(transporter).ownerOf(0)).to.equal(transporter.address);
+    expect(await contract.connect(transporter).ownerOf(0)).to.equal(
+      transporter.address
+    );
   });
-
 });

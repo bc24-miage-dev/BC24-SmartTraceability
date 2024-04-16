@@ -27,6 +27,14 @@ contract BC24 is
     MeatData,
     ManufacturedProductData
 {
+    enum DataType {
+        Animal,
+        Carcass,
+        Transport,
+        Meat,
+        ManufacturedProduct
+    }
+
     //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
@@ -43,6 +51,10 @@ contract BC24 is
 
     uint256 private _nextTokenId;
     mapping(uint256 => address) private tokenOwners;
+
+    // Add this to your contract
+
+    mapping(uint256 => DataType) public tokenDataTypes;
 
     //emits an event when a new token is created
     event NFTMinted(string message);
@@ -150,12 +162,15 @@ contract BC24 is
 
     function createAnimal(
         address account,
-        string memory animalType
+        string memory animalType,
+        uint256 weight,
+        string memory gender
     ) public onlyBreederRole onlyMinterRole returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        AnimalData.createAnimalData(tokenId, animalType);
+        AnimalData.createAnimalData(tokenId, animalType, weight, gender);
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.Animal;
         _nextTokenId++;
         emit NFTMinted("AnimalNFT created");
         return tokenId;
@@ -170,6 +185,7 @@ contract BC24 is
         _mint(msg.sender, tokenId, 1, "");
         CarcassData.createCarcassData(tokenId, animalId);
         tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.Carcass;
         _nextTokenId++;
         emit NFTMinted("CarcassNFT created");
         return tokenId;
@@ -183,6 +199,7 @@ contract BC24 is
 
         MeatData.createMeatData(tokenId, carcassId);
         tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.Meat;
         _nextTokenId++;
         emit NFTMinted("MeatNFT created");
         return tokenId;
@@ -196,6 +213,7 @@ contract BC24 is
 
         ManufacturedProductData.createProductData(tokenId, meatId);
         tokenOwners[tokenId] = msg.sender;
+        tokenDataTypes[tokenId] = DataType.ManufacturedProduct;
         _nextTokenId++;
         emit NFTMinted("ManufacturedProduct created");
         return tokenId;
@@ -458,5 +476,79 @@ contract BC24 is
 
     function ownerOf(uint256 tokenId) public view returns (address) {
         return tokenOwners[tokenId];
+    }
+
+    function getTokensOfOwner() public view returns (uint256[] memory) {
+        uint256[] memory result = new uint256[](_nextTokenId);
+        uint256 counter = 0;
+        for (uint256 i = 0; i < _nextTokenId; i++) {
+            if (tokenOwners[i] == msg.sender) {
+                result[counter] = i;
+                counter++;
+            }
+        }
+        // resize the array
+        uint256[] memory finalResult = new uint256[](counter);
+        for (uint256 i = 0; i < counter; i++) {
+            finalResult[i] = result[i];
+        }
+        return finalResult;
+    }
+
+    function getTokenDataType(uint256 tokenId) public view returns (DataType) {
+        return tokenDataTypes[tokenId];
+    }
+
+    function getTokensByDataType(
+        string memory _dataType
+    ) public view returns (uint256[] memory) {
+        DataType dataType = stringToDataType(_dataType);
+        uint256[] memory result = new uint256[](_nextTokenId);
+        uint256 counter = 0;
+        for (uint256 i = 0; i < _nextTokenId; i++) {
+            if (tokenDataTypes[i] == dataType) {
+                result[counter] = i;
+                counter++;
+            }
+        }
+        // resize the array
+        uint256[] memory finalResult = new uint256[](counter);
+        for (uint256 i = 0; i < counter; i++) {
+            finalResult[i] = result[i];
+        }
+        return finalResult;
+    }
+
+    function stringToDataType(
+        string memory dataType
+    ) public pure returns (DataType) {
+        if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Animal")))
+        ) {
+            return DataType.Animal;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Carcass")))
+        ) {
+            return DataType.Carcass;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Transport")))
+        ) {
+            return DataType.Transport;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("Meat")))
+        ) {
+            return DataType.Meat;
+        } else if (
+            keccak256(abi.encodePacked((dataType))) ==
+            keccak256(abi.encodePacked(("ManufacturedProduct")))
+        ) {
+            return DataType.ManufacturedProduct;
+        } else {
+            revert("Invalid data type");
+        }
     }
 }

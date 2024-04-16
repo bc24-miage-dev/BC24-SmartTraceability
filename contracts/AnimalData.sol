@@ -21,12 +21,19 @@ contract AnimalData is BaseData {
 
     mapping(uint256 => AnimalInfo) private _tokenAnimalData;
 
-    function createAnimalData(uint256 tokenId, string memory name) internal {
+    function createAnimalData(
+        uint256 tokenId,
+        string memory animalType,
+        uint256 weight,
+        string memory gender
+    ) internal {
         AnimalInfo storage animalInfo = _tokenAnimalData[tokenId];
         animalInfo.timingInfo.creationDate = block.timestamp;
         animalInfo.category = "Animal";
         animalInfo.isLifeCycleOver = false;
-        animalInfo.animalType = name;
+        animalInfo.animalType = animalType;
+        animalInfo.weight = weight;
+        animalInfo.gender = gender;
     }
 
     function setAnimalData(
