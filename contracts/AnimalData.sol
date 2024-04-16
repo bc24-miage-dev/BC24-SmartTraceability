@@ -1,39 +1,47 @@
 pragma solidity ^0.8.0;
-import "./BaseData.sol";
 
-contract AnimalData is BaseData {
-    struct AnimalInfo {
-        string placeOfOrigin;
-        uint256 dateOfBirth;
-        string gender;
-        uint256 weight;
-        string[] sicknessList;
-        string[] vaccinationList;
-        uint256[] foodList;
-        // for for dates
-        TimingInfo timingInfo;
-        //string typeOfAnimal;
-        bool isLifeCycleOver;
-        string category;
-        string animalType;
-        bool isContaminated;
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155BurnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+import "./interfaces/IAnimalData.sol";
+
+
+contract AnimalData is
+    Initializable,
+    ERC1155Upgradeable,
+    AccessControlUpgradeable,
+    ERC1155BurnableUpgradeable,
+    UUPSUpgradeable,
+    IAnimalData
+{
+    // other roles
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
-    mapping(uint256 => AnimalInfo) private _tokenAnimalData;
+    function initialize(address defaultAdmin) public initializer {
+        __ERC1155_init("");
+        __AccessControl_init();
+        __ERC1155Burnable_init();
+        __UUPSUpgradeable_init();
 
-    function createAnimalData(
-        uint256 tokenId,
-        string memory animalType,
-        uint256 weight,
-        string memory gender
-    ) internal {
+        _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+    }
+
+    mapping(uint256 => IAnimalData.AnimalInfo) private _tokenAnimalData;
+
+    function createAnimalData(uint256 tokenId, string memory name) external {
         AnimalInfo storage animalInfo = _tokenAnimalData[tokenId];
         animalInfo.timingInfo.creationDate = block.timestamp;
         animalInfo.category = "Animal";
         animalInfo.isLifeCycleOver = false;
-        animalInfo.animalType = animalType;
-        animalInfo.weight = weight;
-        animalInfo.gender = gender;
+        animalInfo.animalType = name;
     }
 
     function setAnimalData(
@@ -44,17 +52,50 @@ contract AnimalData is BaseData {
         uint256 weight,
         string[] memory sicknessList,
         string[] memory vaccinationList,
-        uint256[] memory foodList,
+        string[] memory foodList,
         bool isContaminated
-    ) internal {
+    ) external {
         AnimalInfo storage animal = _tokenAnimalData[tokenId];
         animal.placeOfOrigin = placeOfOrigin;
         animal.dateOfBirth = dateOfBirth;
         animal.gender = gender;
         animal.weight = weight;
-        animal.sicknessList = sicknessList;
-        animal.vaccinationList = vaccinationList;
-        animal.foodList = foodList;
+        for (uint256 i = 0; i < sicknessList.length; i++) {
+            animal.sicknessList.push(
+                Sickness({
+                    sickness: sicknessList[i],
+                    date: TimingInfo({
+                        creationDate: block.timestamp,
+                        lastUpdateDate: block.timestamp
+                    })
+                })
+            );
+        }
+
+        for (uint256 i = 0; i < vaccinationList.length; i++) {
+            animal.vaccinationList.push(
+                Vaccine({
+                    vaccine: vaccinationList[i],
+                    date: TimingInfo({
+                        creationDate: block.timestamp,
+                        lastUpdateDate: block.timestamp
+                    })
+                })
+            );
+        }
+
+        for (uint256 i = 0; i < foodList.length; i++) {
+            animal.foodList.push(
+                Food({
+                    foodname: foodList[i],
+                    quantity: 0,
+                    date: TimingInfo({
+                        creationDate: block.timestamp,
+                        lastUpdateDate: block.timestamp
+                    })
+                })
+            );
+        }
         animal.isContaminated = isContaminated;
 
         animal.timingInfo.lastUpdateDate = block.timestamp;
@@ -64,11 +105,11 @@ contract AnimalData is BaseData {
 
     function getAnimalData(
         uint256 tokenId
-    ) public view virtual returns (AnimalInfo memory) {
+    ) external view returns (AnimalInfo memory) {
         return _tokenAnimalData[tokenId];
     }
 
-    function killAnimal(uint256 animalId) internal {
+    function killAnimal(uint256 animalId) external {
         AnimalInfo storage animal = _tokenAnimalData[animalId];
         require(
             animal.isLifeCycleOver == false,
@@ -76,4 +117,28 @@ contract AnimalData is BaseData {
         );
         animal.isLifeCycleOver = true;
     }
+
+    function test() external pure returns (string memory) {
+        return "hi there";
+    }
+
+    function supportsInterface(
+        bytes4 interfaceId
+    )
+        public
+        view
+        override(AccessControlUpgradeable, ERC1155Upgradeable)
+        returns (bool)
+    {}
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal virtual override {}
+
+    function createAnimalData(
+        uint256 tokenId,
+        string memory animalType,
+        uint256 weight,
+        string memory gender
+    ) external override {}
 }

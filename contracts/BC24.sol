@@ -8,11 +8,15 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155Burn
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "./AnimalData.sol";
 import "./TransportData.sol";
 import "./CarcassData.sol";
 import "./MeatData.sol";
 import "./ManufacturedProductData.sol";
+
+
+import "./interfaces/IAnimalData.sol";
+
+
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -21,7 +25,6 @@ contract BC24 is
     AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
-    AnimalData,
     TransportData,
     CarcassData,
     MeatData,
@@ -62,18 +65,21 @@ contract BC24 is
     // emits an event when metadata is changed
     event MetaDataChanged(string _message);
 
+    IAnimalData private animalDataInstance;
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin) public initializer {
+    function initialize(address defaultAdmin, address animalDataAddress) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+        animalDataInstance = IAnimalData(animalDataAddress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -167,7 +173,7 @@ contract BC24 is
         string memory gender
     ) public onlyBreederRole onlyMinterRole returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        AnimalData.createAnimalData(tokenId, animalType, weight, gender);
+        animalDataInstance.createAnimalData(tokenId, animalType, weight, gender);
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.Animal;
@@ -179,7 +185,7 @@ contract BC24 is
     function slaughterAnimal(
         uint256 animalId
     ) public onlySlaughterRole onlyTokenOwner(animalId) returns (uint256) {
-        AnimalData.killAnimal(animalId);
+        animalDataInstance.killAnimal(animalId);
 
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
@@ -229,10 +235,10 @@ contract BC24 is
         uint256 weight,
         string[] memory sicknessList,
         string[] memory vaccinationList,
-        uint256[] memory foodList,
+        string[] memory foodList,
         bool isContaminated
     ) public onlyBreederRole onlyTokenOwner(tokenId) returns (string memory) {
-        AnimalData.setAnimalData(
+        animalDataInstance.setAnimalData(
             tokenId,
             placeOfOrigin,
             dateOfBirth,
@@ -346,8 +352,8 @@ contract BC24 is
 
     function getAnimal(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (AnimalInfo memory) {
-        return AnimalData.getAnimalData(tokenId);
+    ) public view onlyTokenOwner(tokenId) returns (IAnimalData.AnimalInfo memory) {
+        return animalDataInstance.getAnimalData(tokenId);
     }
 
     function getCarcass(

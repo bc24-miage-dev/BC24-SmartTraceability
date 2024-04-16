@@ -10,19 +10,29 @@ describe("BC24-Breeder", function () {
   let contract: any;
 
   beforeEach(async function () {
-    const ContractFactory = await ethers.getContractFactory("BC24");
+    const BC24Contract = await ethers.getContractFactory("BC24");
+    const AnimalContract = await ethers.getContractFactory("AnimalData");
+
     defaultAdmin = (await ethers.getSigners())[0];
     minter = (await ethers.getSigners())[1];
     random = (await ethers.getSigners())[2];
     breeder = (await ethers.getSigners())[3];
     transporter = (await ethers.getSigners())[4];
 
-    contract = await upgrades.deployProxy(ContractFactory, [
+
+    const animalContract = await upgrades.deployProxy(AnimalContract, [
       defaultAdmin.address,
-      /*       minter.address,
-            defaultAdmin.address,
-            defaultAdmin.address, */
     ]);
+
+    await animalContract.waitForDeployment();
+  
+    const animalDataAddress = await animalContract.getAddress();
+
+    contract = await upgrades.deployProxy(BC24Contract, [
+      defaultAdmin.address,
+      animalDataAddress
+    ]);
+
 
     await contract.waitForDeployment();
 
