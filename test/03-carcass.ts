@@ -3,6 +3,7 @@ import { ethers, upgrades } from "hardhat";
 
 describe("BC24-Carcass", function () {
   let defaultAdmin: { address: unknown };
+  let minter: { address: unknown };
   let random: any;
   let transporter: any;
   let slaughterer: any;
@@ -11,15 +12,26 @@ describe("BC24-Carcass", function () {
   let animalId: any;
 
   beforeEach(async function () {
-    const ContractFactory = await ethers.getContractFactory("BC24");
+    const BC24Contract = await ethers.getContractFactory("BC24");
+    const CarcassContract = await ethers.getContractFactory("CarcassData");
     defaultAdmin = (await ethers.getSigners())[0];
+    minter = (await ethers.getSigners())[1];
     random = (await ethers.getSigners())[2];
     breeder = (await ethers.getSigners())[3];
     transporter = (await ethers.getSigners())[4];
     slaughterer = (await ethers.getSigners())[5];
 
-    contract = await upgrades.deployProxy(ContractFactory, [
+    const carcassContract = await upgrades.deployProxy(CarcassContract, [
       defaultAdmin.address,
+    ]);
+
+    await carcassContract.waitForDeployment();
+  
+    const carcassDataAddress = await carcassContract.getAddress();
+
+    contract = await upgrades.deployProxy(BC24Contract, [
+      defaultAdmin.address, 
+      carcassDataAddress
     ]);
 
     await contract.waitForDeployment();

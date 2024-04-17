@@ -9,14 +9,12 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./TransportData.sol";
-import "./CarcassData.sol";
 import "./MeatData.sol";
 import "./ManufacturedProductData.sol";
 
 
 import "./interfaces/IAnimalData.sol";
-
-
+import "./interfaces/ICarcassData.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -26,7 +24,6 @@ contract BC24 is
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
     TransportData,
-    CarcassData,
     MeatData,
     ManufacturedProductData
 {
@@ -66,13 +63,14 @@ contract BC24 is
     event MetaDataChanged(string _message);
 
     IAnimalData private animalDataInstance;
+    ICarcassData private carcassDataInstance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin, address animalDataAddress) public initializer {
+    function initialize(address defaultAdmin, address animalDataAddress, address carcassDataAdress) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
@@ -80,6 +78,7 @@ contract BC24 is
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         animalDataInstance = IAnimalData(animalDataAddress);
+        carcassDataInstance = ICarcassData(carcassDataAdress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -189,7 +188,7 @@ contract BC24 is
 
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
-        CarcassData.createCarcassData(tokenId, animalId);
+        carcassDataInstance.createCarcassData(tokenId, animalId);
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.Carcass;
         _nextTokenId++;
@@ -286,7 +285,7 @@ contract BC24 is
         uint256 carcassWeight,
         bool isContaminated
     ) public onlySlaughterRole onlyTokenOwner(tokenId) returns (string memory) {
-        CarcassData.setCarcassData(
+        carcassDataInstance.setCarcassData(
             tokenId,
             agreementNumber,
             countryOfSlaughter,
@@ -295,7 +294,7 @@ contract BC24 is
             isContaminated
         );
 
-        emit MetaDataChanged("Carcas info added successfully.");
+        emit MetaDataChanged("Carcass info added successfully.");
 
         return "Carcas info added successfully.";
     }
@@ -358,8 +357,8 @@ contract BC24 is
 
     function getCarcass(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (CarcassInfo memory) {
-        return CarcassData.getCarcassData(tokenId);
+    ) public view onlyTokenOwner(tokenId) returns (ICarcassData.CarcassInfo memory) {
+        return carcassDataInstance.getCarcassData(tokenId);
     }
 
     function getTransport(
