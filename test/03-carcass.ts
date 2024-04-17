@@ -25,8 +25,6 @@ describe("BC24-Carcass", function () {
     slaughterer = setupService.slaughterer;
     contract = setupService.contract;
 
-
-
     const transaction = await contract
       .connect(breeder)
       .createAnimal(breeder.address, "Cow", 10, "male");

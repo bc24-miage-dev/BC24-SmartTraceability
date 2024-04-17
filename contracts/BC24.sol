@@ -12,7 +12,6 @@ import "./TransportData.sol";
 import "./MeatData.sol";
 import "./ManufacturedProductData.sol";
 
-
 import "./interfaces/IAnimalData.sol";
 import "./interfaces/ICarcassData.sol";
 
@@ -57,10 +56,10 @@ contract BC24 is
     mapping(uint256 => DataType) public tokenDataTypes;
 
     //emits an event when a new token is created
-    event NFTMinted(string message);
+    event NFTMinted(uint256 tokenId, address owner, string message);
 
     // emits an event when metadata is changed
-    event MetaDataChanged(string _message);
+    event MetaDataChanged(uint256 tokenId, address owner, string message);
 
     IAnimalData private animalDataInstance;
     ICarcassData private carcassDataInstance;
@@ -70,7 +69,11 @@ contract BC24 is
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin, address animalDataAddress, address carcassDataAdress) public initializer {
+    function initialize(
+        address defaultAdmin,
+        address animalDataAddress,
+        address carcassDataAdress
+    ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
@@ -172,12 +175,17 @@ contract BC24 is
         string memory gender
     ) public onlyBreederRole onlyMinterRole returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        animalDataInstance.createAnimalData(tokenId, animalType, weight, gender);
+        animalDataInstance.createAnimalData(
+            tokenId,
+            animalType,
+            weight,
+            gender
+        );
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.Animal;
         _nextTokenId++;
-        emit NFTMinted("AnimalNFT created");
+        emit NFTMinted(tokenId, msg.sender, "AnimalNFT created");
         return tokenId;
     }
 
@@ -192,7 +200,7 @@ contract BC24 is
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.Carcass;
         _nextTokenId++;
-        emit NFTMinted("CarcassNFT created");
+        emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
         return tokenId;
     }
 
@@ -206,7 +214,7 @@ contract BC24 is
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.Meat;
         _nextTokenId++;
-        emit NFTMinted("MeatNFT created");
+        emit NFTMinted(tokenId, msg.sender, "MeatNFT created");
         return tokenId;
     }
 
@@ -220,7 +228,7 @@ contract BC24 is
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.ManufacturedProduct;
         _nextTokenId++;
-        emit NFTMinted("ManufacturedProduct created");
+        emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
         return tokenId;
     }
 
@@ -249,9 +257,9 @@ contract BC24 is
             isContaminated
         );
 
-        emit MetaDataChanged("Breeding info added successfully.");
+        emit MetaDataChanged(tokenId, msg.sender, "Breeding info changed.");
 
-        return "Breeding info added successfully.";
+        return "Breeding info changed.";
     }
 
     function updateTransport(
@@ -273,8 +281,12 @@ contract BC24 is
             humidity,
             isContaminated
         );
-        emit MetaDataChanged("Transport info added successfully.");
-        return "Transport info added successfully.";
+        emit MetaDataChanged(
+            tokenId,
+            msg.sender,
+            "Transport info changed."
+        );
+        return "Transport info changed.";
     }
 
     function updateCarcass(
@@ -294,9 +306,9 @@ contract BC24 is
             isContaminated
         );
 
-        emit MetaDataChanged("Carcass info added successfully.");
+        emit MetaDataChanged(tokenId, msg.sender, "Carcass info changed.");
 
-        return "Carcas info added successfully.";
+        return "Carcas info changed.";
     }
 
     function updateMeat(
@@ -320,8 +332,8 @@ contract BC24 is
             part,
             isContaminated
         );
-        emit MetaDataChanged("Meat info added successfully.");
-        return "Meat info added successfully.";
+        emit MetaDataChanged(tokenId, msg.sender, "Meat info changed.");
+        return "Meat info changed.";
     }
 
     function updateManufacturedProduct(
@@ -343,21 +355,31 @@ contract BC24 is
             price,
             description
         );
-        emit MetaDataChanged("ManufacturedProduct info added successfully.");
-        return "ManufacturedProduct info added successfully.";
+        emit MetaDataChanged(tokenId, msg.sender, "ManufacturedProduct info changed.");
+        return "ManufacturedProduct info changed.";
     }
 
     /* Token Getter functions */
 
     function getAnimal(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (IAnimalData.AnimalInfo memory) {
+    )
+        public
+        view
+        onlyTokenOwner(tokenId)
+        returns (IAnimalData.AnimalInfo memory)
+    {
         return animalDataInstance.getAnimalData(tokenId);
     }
 
     function getCarcass(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (ICarcassData.CarcassInfo memory) {
+    )
+        public
+        view
+        onlyTokenOwner(tokenId)
+        returns (ICarcassData.CarcassInfo memory)
+    {
         return carcassDataInstance.getCarcassData(tokenId);
     }
 

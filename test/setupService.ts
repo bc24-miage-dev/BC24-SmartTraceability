@@ -6,6 +6,7 @@ export class SetupService {
   transporter: any;
   slaughterer: any;
   breeder: any;
+  random: any;
   contract: any;
 
   constructor() {
@@ -24,6 +25,7 @@ export class SetupService {
     this.breeder = (await ethers.getSigners())[2];
     this.transporter = (await ethers.getSigners())[3];
     this.slaughterer = (await ethers.getSigners())[4];
+    this.random = (await ethers.getSigners())[5];
 
     /* Add interfaces here like below */
     const AnimalContract = await ethers.getContractFactory("AnimalData");
