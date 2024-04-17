@@ -12,7 +12,6 @@ describe("BC24-Breeder", function () {
   beforeEach(async function () {
     const BC24Contract = await ethers.getContractFactory("BC24");
     const AnimalContract = await ethers.getContractFactory("AnimalData");
-
     defaultAdmin = (await ethers.getSigners())[0];
     minter = (await ethers.getSigners())[1];
     random = (await ethers.getSigners())[2];

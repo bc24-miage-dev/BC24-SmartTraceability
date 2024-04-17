@@ -30,7 +30,6 @@ contract AnimalData is
         __AccessControl_init();
         __ERC1155Burnable_init();
         __UUPSUpgradeable_init();
-
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
     }
 

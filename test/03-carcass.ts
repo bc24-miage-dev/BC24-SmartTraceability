@@ -1,42 +1,31 @@
-import { expect, assert } from "chai";
-import { ethers, upgrades } from "hardhat";
+import { expect } from "chai";
+import { SetupService } from "./setupService";
 
 describe("BC24-Carcass", function () {
-  let defaultAdmin: { address: unknown };
-  let random: any;
+  let defaultAdmin:any;
+  let minter: any;
   let transporter: any;
   let slaughterer: any;
   let breeder: any;
   let contract: any;
   let animalId: any;
+  let setupService: any;
 
   beforeEach(async function () {
-    const ContractFactory = await ethers.getContractFactory("BC24");
-    defaultAdmin = (await ethers.getSigners())[0];
-    random = (await ethers.getSigners())[2];
-    breeder = (await ethers.getSigners())[3];
-    transporter = (await ethers.getSigners())[4];
-    slaughterer = (await ethers.getSigners())[5];
 
-    contract = await upgrades.deployProxy(ContractFactory, [
-      defaultAdmin.address,
-    ]);
+    /* This it the general setup needed for all the contracts*/
+    /* If a new contract is put into an interface it needs to be added likewise in the SetupService */
+    setupService = new SetupService();
+    await setupService.setup();
 
-    await contract.waitForDeployment();
+    defaultAdmin = setupService.defaultAdmin;
+    minter = setupService.minter;
+    breeder = setupService.breeder;
+    transporter = setupService.transporter;
+    slaughterer = setupService.slaughterer;
+    contract = setupService.contract;
 
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(breeder.address, "BREEDER_ROLE");
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(breeder.address, "MINTER_ROLE");
 
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(slaughterer.address, "SLAUGHTER_ROLE");
 
     const transaction = await contract
       .connect(breeder)
