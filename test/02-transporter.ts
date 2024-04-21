@@ -1,5 +1,6 @@
 import { expect, assert } from "chai";
 import { ethers, upgrades } from "hardhat";
+import { SetupService } from "./setupService";
 
 describe("BC24-Transporter", function () {
   let defaultAdmin: { address: unknown };
@@ -11,50 +12,27 @@ describe("BC24-Transporter", function () {
   let contract: any;
   let animalId: any;
 
+  let setupService: any;
+
   beforeEach(async function () {
-    const ContractFactory = await ethers.getContractFactory("BC24");
-    defaultAdmin = (await ethers.getSigners())[0];
-    minter = (await ethers.getSigners())[1];
-    random = (await ethers.getSigners())[2];
-    breeder = (await ethers.getSigners())[3];
-    transporter = (await ethers.getSigners())[4];
-    slaughterer = (await ethers.getSigners())[5];
+    setupService = new SetupService();
+    await setupService.setup();
 
-    contract = await upgrades.deployProxy(ContractFactory, [
-      defaultAdmin.address,
-      /*       minter.address,
-                  defaultAdmin.address,
-                  defaultAdmin.address, */
-    ]);
-
-    await contract.waitForDeployment();
-
-    // grant the roles
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(minter.address, "MINTER_ROLE");
-
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(breeder.address, "BREEDER_ROLE");
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(breeder.address, "MINTER_ROLE");
-
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(slaughterer.address, "SLAUGHTER_ROLE");
+    defaultAdmin = setupService.defaultAdmin;
+    minter = setupService.minter;
+    breeder = setupService.breeder;
+    transporter = setupService.transporter;
+    slaughterer = setupService.slaughterer;
+    random = setupService.random;
+    contract = setupService.contract;
 
     const transaction = await contract
       .connect(breeder)
-      .createAnimal(breeder.address, "Cow", 10 , "male");
+      .createAnimal(breeder.address, "Cow", 10, "male");
     animalId = transaction.value;
     await contract
       .connect(breeder)
-      .transferAnimalToTransporter(animalId, transporter.address);
+      .transferToken(animalId, transporter.address);
   });
 
   it("Test contract", async function () {
@@ -82,7 +60,7 @@ describe("BC24-Transporter", function () {
         )
     )
       .to.emit(contract, "MetaDataChanged")
-      .withArgs("Transport info added successfully.");
+      .withArgs(0n, transporter.address, "Transport info changed.");
 
     const transportData = await contract
       .connect(transporter)
@@ -123,7 +101,7 @@ describe("BC24-Transporter", function () {
   it("should transfer animal to slaughterer", async function () {
     await contract
       .connect(transporter)
-      .transferAnimalToSlaugtherer(animalId, slaughterer.address);
+      .transferToken(animalId, slaughterer.address);
     expect(await contract.connect(slaughterer).ownerOf(animalId)).to.equal(
       slaughterer.address
     );
@@ -132,7 +110,7 @@ describe("BC24-Transporter", function () {
   it("should not allow transporter to change carcass", async function () {
     await contract
       .connect(transporter)
-      .transferAnimalToSlaugtherer(animalId, slaughterer.address);
+      .transferToken(animalId, slaughterer.address);
     const transaction = await contract
       .connect(slaughterer)
       .slaughterAnimal(animalId);
@@ -140,7 +118,7 @@ describe("BC24-Transporter", function () {
 
     await contract
       .connect(slaughterer)
-      .transferCarcassToTransporter(carcassId, transporter.address);
+      .transferToken(carcassId, transporter.address);
     expect(await contract.connect(transporter).ownerOf(carcassId)).to.equal(
       transporter.address
     );

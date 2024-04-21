@@ -31,10 +31,10 @@ describe("BC24-Carcass", function () {
     animalId = transaction.value;
     await contract
       .connect(breeder)
-      .transferAnimalToTransporter(animalId, transporter.address);
+      .transferToken(animalId, transporter.address);
     await contract
       .connect(transporter)
-      .transferAnimalToSlaugtherer(animalId, slaughterer.address);
+      .transferToken(animalId, slaughterer.address);
   });
 
   it("Test contract", async function () {
