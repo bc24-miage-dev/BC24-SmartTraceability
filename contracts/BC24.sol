@@ -15,6 +15,7 @@ import "./ManufacturedProductData.sol";
 import "./interfaces/IAnimalData.sol";
 import "./interfaces/ICarcassData.sol";
 import "./interfaces/IRecipeData.sol";
+import "./interfaces/IMeatData.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -24,7 +25,6 @@ contract BC24 is
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
     TransportData,
-    MeatData,
     ManufacturedProductData
 {
     enum CategoryType {
@@ -65,6 +65,7 @@ contract BC24 is
     IAnimalData private animalDataInstance;
     ICarcassData private carcassDataInstance;
     IRecipeData private recipeDataInstance;
+    IMeatData private meatDataInstance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -75,7 +76,8 @@ contract BC24 is
         address defaultAdmin,
         address animalDataAddress,
         address carcassDataAdress,
-        address recipeDataAddress
+        address recipeDataAddress,
+        address meatDataAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -86,6 +88,7 @@ contract BC24 is
         animalDataInstance = IAnimalData(animalDataAddress);
         carcassDataInstance = ICarcassData(carcassDataAdress);
         recipeDataInstance = IRecipeData(recipeDataAddress);
+        meatDataInstance = IMeatData(meatDataAddress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -101,7 +104,6 @@ contract BC24 is
         );
         _;
     }
-    
 
     modifier onlySlaughterRole() {
         require(
@@ -132,15 +134,14 @@ contract BC24 is
         _;
     }
     modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
-    for (uint256 i = 0; i < tokenIds.length; i++) {
-        require(
-            msg.sender == tokenOwners[tokenIds[i]],
-            "Caller does not own one of the tokens"
-        );
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(
+                msg.sender == tokenOwners[tokenIds[i]],
+                "Caller does not own one of the tokens"
+            );
+        }
+        _;
     }
-    _;
-    }
-
 
     modifier receiverOnlyRole(bytes32 role, address receiver) {
         require(hasRole(role, receiver), "Caller is not valid receiver");
@@ -225,7 +226,7 @@ contract BC24 is
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
         uint256 weight = 99; //hardcoded value !!
-        MeatData.createMeatData(tokenId, carcassId, weight);
+        meatDataInstance.createMeatData(tokenId, carcassId, weight);
         tokenOwners[tokenId] = msg.sender;
         tokenCategoryTypes[tokenId] = CategoryType.Meat;
         _nextTokenId++;
@@ -245,6 +246,7 @@ contract BC24 is
         emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
         return tokenId;
     }
+
     /* Token Update functions */
 
     function updateAnimal(
@@ -294,11 +296,7 @@ contract BC24 is
             humidity,
             isContaminated
         );
-        emit MetaDataChanged(
-            tokenId,
-            msg.sender,
-            "Transport info changed."
-        );
+        emit MetaDataChanged(tokenId, msg.sender, "Transport info changed.");
         return "Transport info changed.";
     }
 
@@ -338,7 +336,7 @@ contract BC24 is
         onlyTokenOwner(tokenId)
         returns (string memory)
     {
-        MeatData.setMeatData(
+        meatDataInstance.setMeatData(
             tokenId,
             agreementNumber,
             countryOfCutting,
@@ -370,7 +368,11 @@ contract BC24 is
             price,
             description
         );
-        emit MetaDataChanged(tokenId, msg.sender, "ManufacturedProduct info changed.");
+        emit MetaDataChanged(
+            tokenId,
+            msg.sender,
+            "ManufacturedProduct info changed."
+        );
         return "ManufacturedProduct info changed.";
     }
 
@@ -406,18 +408,29 @@ contract BC24 is
 
     function getMeat(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (MeatInfo memory) {
-        return MeatData.getMeatData(tokenId);
+    ) public view onlyTokenOwner(tokenId) returns (IMeatData.MeatInfo memory) {
+        return meatDataInstance.getMeatData(tokenId);
     }
 
     function getManufacturedProduct(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (ManufacturedProductInfo memory) {
+    )
+        public
+        view
+        onlyTokenOwner(tokenId)
+        returns (ManufacturedProductInfo memory)
+    {
         return ManufacturedProductData.getManufacturedProductData(tokenId);
     }
 
-    function getRecipe(uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (IRecipeData.RecipeInfo memory){  
+    function getRecipe(
+        uint256 tokenId
+    )
+        public
+        view
+        onlyTokenOwner(tokenId)
+        returns (IRecipeData.RecipeInfo memory)
+    {
         return recipeDataInstance.getRecipeData(tokenId);
     }
 
@@ -537,7 +550,9 @@ contract BC24 is
         return finalResult;
     }
 
-    function getTokenDataType(uint256 tokenId) public view returns (CategoryType) {
+    function getTokenDataType(
+        uint256 tokenId
+    ) public view returns (CategoryType) {
         return tokenCategoryTypes[tokenId];
     }
 
