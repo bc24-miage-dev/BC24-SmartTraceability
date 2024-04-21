@@ -16,6 +16,7 @@ import "./interfaces/IAnimalData.sol";
 import "./interfaces/ICarcassData.sol";
 import "./interfaces/IRecipeData.sol";
 import "./interfaces/IMeatData.sol";
+import "./interfaces/ITransportData.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -24,7 +25,6 @@ contract BC24 is
     AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
-    TransportData,
     ManufacturedProductData
 {
     enum CategoryType {
@@ -66,6 +66,7 @@ contract BC24 is
     ICarcassData private carcassDataInstance;
     IRecipeData private recipeDataInstance;
     IMeatData private meatDataInstance;
+    ITransportData private transportDataInstance;   
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -77,7 +78,8 @@ contract BC24 is
         address animalDataAddress,
         address carcassDataAdress,
         address recipeDataAddress,
-        address meatDataAddress
+        address meatDataAddress,
+        address transportDataAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -89,6 +91,7 @@ contract BC24 is
         carcassDataInstance = ICarcassData(carcassDataAdress);
         recipeDataInstance = IRecipeData(recipeDataAddress);
         meatDataInstance = IMeatData(meatDataAddress);
+        transportDataInstance = ITransportData(transportDataAddress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -289,7 +292,7 @@ contract BC24 is
         onlyTokenOwner(tokenId)
         returns (string memory)
     {
-        TransportData.setTransportData(
+        transportDataInstance.setTransportData(
             tokenId,
             duration,
             temperature,
@@ -402,8 +405,8 @@ contract BC24 is
 
     function getTransport(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (TransportInfo memory) {
-        return TransportData.getTransportData(tokenId);
+    ) public view onlyTokenOwner(tokenId) returns (ITransportData.TransportInfo memory) {
+        return transportDataInstance.getTransportData(tokenId);
     }
 
     function getMeat(
@@ -447,7 +450,7 @@ contract BC24 is
     {
         safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
         tokenOwners[tokenId] = transporter;
-        TransportData.createTransportData(tokenId);
+        transportDataInstance.createTransportData(tokenId);
     }
 
     function transferAnimalToSlaugtherer(
@@ -487,10 +490,6 @@ contract BC24 is
     {
         safeTransferFrom(msg.sender, manufacturer, tokenId, 1, "");
         tokenOwners[tokenId] = manufacturer;
-    }
-
-    function tester() public pure returns (string memory) {
-        return "Hello World";
     }
 
     /* Destroys a Token and its associated Metadata */
