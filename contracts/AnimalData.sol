@@ -49,9 +49,9 @@ contract AnimalData is
         uint256 dateOfBirth,
         string memory gender,
         uint256 weight,
-        Sickness[] memory sicknessList,
-        Vaccine[] memory vaccinationList,
-        Food[] memory foodList,
+        string[] memory sicknessList,
+        string[] memory vaccinationList,
+        string[] memory foodList,
         bool isContaminated
     ) external {
         AnimalInfo storage animal = _tokenAnimalData[tokenId];
