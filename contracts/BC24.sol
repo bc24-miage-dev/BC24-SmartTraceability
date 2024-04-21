@@ -103,6 +103,7 @@ contract BC24 is
         );
         _;
     }
+    
 
     modifier onlySlaughterRole() {
         require(
@@ -267,6 +268,31 @@ contract BC24 is
         emit NFTMinted(tokenId, msg.sender, "Recipe created");
         return tokenId;
     }
+
+function createManufacturedProductFromRecipe(
+    uint256 recipeId,
+    uint256[] memory meatIds
+) public onlyManufacturerRole onlyTokenOwnerList(meatIds) onlyTokenOwner(recipeId) returns (uint256) {
+    
+    // Créer le produit manufacturé avec les détails de la recette
+    uint256 tokenId = _nextTokenId;
+    _mint(msg.sender, tokenId, 1, "");
+
+    RecipeInfo memory recipe = getRecipe(recipeId);
+
+    for (uint256 i = 0; i < meatIds.length; i++) {
+            // Vérifier si la catégorie de viande correspond à celle requise dans la recette
+            require(MeatData.checkMeatCategory(meatIds[i], recipe.ingredientMeat[i].animalType), "Invalid meat category");
+            // Vérifier si le poids de la viande est suffisant
+            require(MeatData.checkMeatWeight(meatIds[i], recipe.ingredientMeat[i].weight), "Insufficient meat weight");
+            // Vérifier si la partie de la viande correspond à celle requise dans la recette
+            require(MeatData.checkMeatPart(meatIds[i], recipe.ingredientMeat[i].part), "Invalid meat part");
+    }
+
+
+
+    return 2;
+}
 
     /* Token Update functions */
 
@@ -440,12 +466,7 @@ contract BC24 is
 
     function getManufacturedProduct(
         uint256 tokenId
-    )
-        public
-        view
-        onlyTokenOwner(tokenId)
-        returns (ManufacturedProductInfo memory)
-    {
+    ) public view onlyTokenOwner(tokenId) returns (ManufacturedProductInfo memory) {
         return ManufacturedProductData.getManufacturedProductData(tokenId);
     }
 
@@ -496,6 +517,7 @@ contract BC24 is
     function ownerOf(uint256 tokenId) public view returns (address) {
         return tokenOwners[tokenId];
     }
+
 
     function getTokensOfOwner() public view returns (uint256[] memory) {
         uint256[] memory result = new uint256[](_nextTokenId);
