@@ -8,6 +8,7 @@ export class SetupService {
   breeder: any;
   random: any;
   contract: any;
+  manufacturer: any;
 
   constructor() {
     this.defaultAdmin = {};
@@ -16,6 +17,8 @@ export class SetupService {
     this.slaughterer = {};
     this.breeder = {};
     this.contract = {};
+    this.random = {};
+    this.manufacturer = {};
   }
 
   async setup() {
@@ -26,6 +29,7 @@ export class SetupService {
     this.transporter = (await ethers.getSigners())[3];
     this.slaughterer = (await ethers.getSigners())[4];
     this.random = (await ethers.getSigners())[5];
+    this.manufacturer = (await ethers.getSigners())[6];
 
     /* Add interfaces here like below */
     const AnimalContract = await ethers.getContractFactory("AnimalData");
@@ -52,8 +56,6 @@ export class SetupService {
       this.defaultAdmin.address,
     ]);
     await meatContract.waitForDeployment();
-
-
 
     const RecipeContract = await ethers.getContractFactory("RecipeData");
     const recipeContract = await upgrades.deployProxy(RecipeContract, [
@@ -82,12 +84,14 @@ export class SetupService {
     await this.contract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.breeder.address, "MINTER_ROLE");
-
     await this.contract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.transporter.address, "TRANSPORTER_ROLE");
     await this.contract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.slaughterer.address, "SLAUGHTER_ROLE");
+    await this.contract
+      .connect(this.defaultAdmin)
+      .grantRoleToAddress(this.manufacturer.address, "MANUFACTURERE_ROLE");
   }
 }

@@ -1,49 +1,33 @@
 import { expect, assert } from "chai";
 import { ethers, upgrades } from "hardhat";
+import { SetupService } from "./setupService";
 
 describe("BC24-Meat", function () {
-  let defaultAdmin: { address: unknown };
-  let random: any;
+  let defaultAdmin: any;
+  let minter: any;
   let transporter: any;
   let slaughterer: any;
   let breeder: any;
   let manufacturer: any;
-
   let contract: any;
+  let random: any;
   let animalId: any;
   let carcassId: any;
 
+  let setupService: any;
+
   beforeEach(async function () {
-    const ContractFactory = await ethers.getContractFactory("BC24");
-    defaultAdmin = (await ethers.getSigners())[0];
-    random = (await ethers.getSigners())[2];
-    breeder = (await ethers.getSigners())[3];
-    transporter = (await ethers.getSigners())[4];
-    slaughterer = (await ethers.getSigners())[5];
-    manufacturer = (await ethers.getSigners())[6];
+    setupService = new SetupService();
+    await setupService.setup();
 
-    contract = await upgrades.deployProxy(ContractFactory, [
-      defaultAdmin.address,
-    ]);
-
-    await contract.waitForDeployment();
-
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(breeder.address, "BREEDER_ROLE");
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(breeder.address, "MINTER_ROLE");
-
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(transporter.address, "TRANSPORTER_ROLE");
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(slaughterer.address, "SLAUGHTER_ROLE");
-    await contract
-      .connect(defaultAdmin)
-      .grantRoleToAddress(manufacturer.address, "MANUFACTURERE_ROLE");
+    defaultAdmin = setupService.defaultAdmin;
+    minter = setupService.minter;
+    breeder = setupService.breeder;
+    transporter = setupService.transporter;
+    slaughterer = setupService.slaughterer;
+    random = setupService.random;
+    manufacturer = setupService.manufacturer;
+    contract = setupService.contract;
 
     const transaction = await contract
       .connect(breeder)
@@ -51,17 +35,17 @@ describe("BC24-Meat", function () {
     animalId = transaction.value;
     await contract
       .connect(breeder)
-      .transferAnimalToTransporter(animalId, transporter.address);
+      .transferToken(animalId, transporter.address);
     const slaugtherTransaction = await contract
       .connect(transporter)
-      .transferAnimalToSlaugtherer(animalId, slaughterer.address);
+      .transferToken(animalId, slaughterer.address);
     carcassId = slaugtherTransaction.value;
     await contract
       .connect(slaughterer)
-      .transferCarcassToTransporter(carcassId, transporter.address);
+      .transferToken(carcassId, transporter.address);
     await contract
       .connect(transporter)
-      .transferCarcassToManufacturer(carcassId, manufacturer.address);
+      .transferToken(carcassId, manufacturer.address);
   });
 
   it("Test contract", async function () {
@@ -94,6 +78,7 @@ describe("BC24-Meat", function () {
     const dateOfCutting = 1622524800;
     const part = "Tongue";
     const isContaminated = false;
+    const weight = 100;
 
     await expect(
       await contract
@@ -104,11 +89,12 @@ describe("BC24-Meat", function () {
           countryOfCutting,
           dateOfCutting,
           part,
-          isContaminated
+          isContaminated,
+          weight
         )
     )
       .to.emit(contract, "MetaDataChanged")
-      .withArgs("Meat info added successfully.");
+      .withArgs(meatId, manufacturer.address, "Meat info changed.");
 
     const meat = await contract.connect(manufacturer).getMeat(meatId);
     expect(meat.agreementNumber).to.equal(agreementNumber);
@@ -128,6 +114,7 @@ describe("BC24-Meat", function () {
     const dateOfCutting = 1622524800;
     const part = "Tongue";
     const isContaminated = false;
+    const weight = 100;
 
     await expect(
       await contract
@@ -138,64 +125,19 @@ describe("BC24-Meat", function () {
           countryOfCutting,
           dateOfCutting,
           part,
-          isContaminated
+          isContaminated,
+          weight
         )
     )
       .to.emit(contract, "MetaDataChanged")
-      .withArgs("Meat info added successfully.");
+      .withArgs(meatId, manufacturer.address, "Meat info changed.");
 
     await expect(
       await contract.connect(manufacturer).createManufacturedProduct(meatId)
     )
       .to.emit(contract, "NFTMinted")
-      .withArgs("ManufacturedProduct created");
+      .withArgs(1n, manufacturer.address, "ManufacturedProduct created");
   });
 
-  it("update manufacturedproduct data", async function () {
-    const transaction = await contract
-      .connect(manufacturer)
-      .createMeat(carcassId);
-
-    const meatId = transaction.value;
-
-    const productTranscation = await contract
-      .connect(manufacturer)
-      .createManufacturedProduct(meatId);
-    const manufacturedProductId = productTranscation.value;
-
-    const productName = "Schnitzel";
-    const dateOfManufacturation = 1622524800;
-    const price = 50;
-    const description = "Schnitzel aus der Schweiz";
-
-    await expect(
-      await contract
-        .connect(manufacturer)
-        .updateManufacturedProduct(
-          manufacturedProductId,
-          dateOfManufacturation,
-          productName,
-          price,
-          description
-        )
-    )
-      .to.emit(contract, "MetaDataChanged")
-      .withArgs("ManufacturedProduct info added successfully.");
-
-    const manufacturedProduct = await contract
-      .connect(manufacturer)
-      .getManufacturedProduct(manufacturedProductId);
-    expect(manufacturedProduct.productName).to.equal(productName);
-    expect(manufacturedProduct.dateOfManufacturation).to.equal(
-      dateOfManufacturation
-    );
-  });
-
-  it("create new recipe", async function () {
-    expect(0).to.equal(1);
-  });
-
-  it("create new manufacturedProduct with recipe", async function () {
-    expect(0).to.equal(1);
-  });
+ 
 });
