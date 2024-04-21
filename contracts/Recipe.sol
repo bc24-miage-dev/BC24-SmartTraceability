@@ -32,7 +32,7 @@ contract RecipeData is
 
     mapping(uint256 => IRecipeData.RecipeInfo) private _tokenRecipeData;
 
-    function createRecipe(
+    function createRecipeData(
         uint256 recipeId,
         string memory recipeName,
         string memory description,

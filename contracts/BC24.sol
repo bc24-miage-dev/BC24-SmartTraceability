@@ -18,6 +18,8 @@ import "./interfaces/IRecipeData.sol";
 import "./interfaces/IMeatData.sol";
 import "./interfaces/ITransportData.sol";
 
+import "./libraries/utils.sol";
+
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
     Initializable,
@@ -27,13 +29,7 @@ contract BC24 is
     UUPSUpgradeable,
     ManufacturedProductData
 {
-    enum CategoryType {
-        Animal,
-        Carcass,
-        Transport,
-        Meat,
-        ManufacturedProduct
-    }
+    using Utils for string;
 
     //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
@@ -54,7 +50,7 @@ contract BC24 is
 
     // Add this to your contract
 
-    mapping(uint256 => CategoryType) public tokenCategoryTypes;
+    mapping(uint256 => Utils.CategoryType) public tokenCategoryTypes;
 
     //emits an event when a new token is created
     event NFTMinted(uint256 tokenId, address owner, string message);
@@ -202,7 +198,7 @@ contract BC24 is
         );
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryType.Animal;
+        tokenCategoryTypes[tokenId] = Utils.CategoryType.Animal;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "AnimalNFT created");
         return tokenId;
@@ -217,7 +213,7 @@ contract BC24 is
         _mint(msg.sender, tokenId, 1, "");
         carcassDataInstance.createCarcassData(tokenId, animalId);
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryType.Carcass;
+        tokenCategoryTypes[tokenId] = Utils.CategoryType.Carcass;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
         return tokenId;
@@ -231,7 +227,7 @@ contract BC24 is
         uint256 weight = 99; //hardcoded value !!
         meatDataInstance.createMeatData(tokenId, carcassId, weight);
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryType.Meat;
+        tokenCategoryTypes[tokenId] = Utils.CategoryType.Meat;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "MeatNFT created");
         return tokenId;
@@ -244,9 +240,31 @@ contract BC24 is
         _mint(msg.sender, tokenId, 1, "");
         ManufacturedProductData.createProductData(tokenId, meatId);
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryType.ManufacturedProduct;
+        tokenCategoryTypes[tokenId] = Utils.CategoryType.ManufacturedProduct;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
+        return tokenId;
+    }
+
+    function createRecipe(
+        string memory recipeName,
+        string memory description,
+        string[] memory ingredientMeat,
+        string[] memory ingredientPart
+    ) public onlyManufacturerRole returns (uint256) {
+        uint256 tokenId = _nextTokenId;
+        _mint(msg.sender, tokenId, 1, "");
+        recipeDataInstance.createRecipeData(
+            tokenId,
+            recipeName,
+            description,
+            ingredientMeat,
+            ingredientPart
+        );
+        tokenOwners[tokenId] = msg.sender;
+        tokenCategoryTypes[tokenId] = Utils.CategoryType.Recipe;
+        _nextTokenId++;
+        emit NFTMinted(tokenId, msg.sender, "Recipe created");
         return tokenId;
     }
 
@@ -454,21 +472,6 @@ contract BC24 is
         // transportDataInstance.createTransportData(tokenId);
     }
 
-    /* Destroys a Token and its associated Metadata */
-    function destroyToken(
-        address account,
-        uint256 _tokenId,
-        uint256 amount
-    ) public returns (string memory) {
-        require(
-            balanceOf(account, _tokenId) >= amount,
-            "There is no such token to destroy."
-        );
-        _burn(account, _tokenId, amount);
-        //SupplyChainData.deleteSupplyChainData(_tokenId);
-        return "Token has been successfully destroyed";
-    }
-
     /* Function to get the current amount of tokens around. Needed for testing */
     function getTokenIndex() public view returns (uint256) {
         return _nextTokenId;
@@ -513,14 +516,14 @@ contract BC24 is
 
     function getTokenDataType(
         uint256 tokenId
-    ) public view returns (CategoryType) {
+    ) public view returns (Utils.CategoryType) {
         return tokenCategoryTypes[tokenId];
     }
 
     function getTokensByDataType(
         string memory _dataType
     ) public view returns (uint256[] memory) {
-        CategoryType dataType = stringToDataType(_dataType);
+        Utils.CategoryType dataType = _dataType.stringToDataType();
         uint256[] memory result = new uint256[](_nextTokenId);
         uint256 counter = 0;
         for (uint256 i = 0; i < _nextTokenId; i++) {
@@ -535,38 +538,5 @@ contract BC24 is
             finalResult[i] = result[i];
         }
         return finalResult;
-    }
-
-    function stringToDataType(
-        string memory dataType
-    ) public pure returns (CategoryType) {
-        if (
-            keccak256(abi.encodePacked((dataType))) ==
-            keccak256(abi.encodePacked(("Animal")))
-        ) {
-            return CategoryType.Animal;
-        } else if (
-            keccak256(abi.encodePacked((dataType))) ==
-            keccak256(abi.encodePacked(("Carcass")))
-        ) {
-            return CategoryType.Carcass;
-        } else if (
-            keccak256(abi.encodePacked((dataType))) ==
-            keccak256(abi.encodePacked(("Transport")))
-        ) {
-            return CategoryType.Transport;
-        } else if (
-            keccak256(abi.encodePacked((dataType))) ==
-            keccak256(abi.encodePacked(("Meat")))
-        ) {
-            return CategoryType.Meat;
-        } else if (
-            keccak256(abi.encodePacked((dataType))) ==
-            keccak256(abi.encodePacked(("ManufacturedProduct")))
-        ) {
-            return CategoryType.ManufacturedProduct;
-        } else {
-            revert("Invalid data type");
-        }
     }
 }

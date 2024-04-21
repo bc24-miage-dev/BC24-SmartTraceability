@@ -12,7 +12,7 @@ interface IRecipeData{
         string animalType;
     }
 
-    function createRecipe(
+    function createRecipeData(
         uint256 recipeId,
         string memory recipeName,
         string memory description,
