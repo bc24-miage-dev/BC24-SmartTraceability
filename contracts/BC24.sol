@@ -24,7 +24,8 @@ contract BC24 is
     UUPSUpgradeable,
     TransportData,
     MeatData,
-    ManufacturedProductData
+    ManufacturedProductData,
+    RecipeData
 {
     enum DataType {
         Animal,
@@ -97,6 +98,7 @@ contract BC24 is
         );
         _;
     }
+    
 
     modifier onlySlaughterRole() {
         require(
@@ -126,6 +128,16 @@ contract BC24 is
         );
         _;
     }
+    modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
+    for (uint256 i = 0; i < tokenIds.length; i++) {
+        require(
+            msg.sender == tokenOwners[tokenIds[i]],
+            "Caller does not own one of the tokens"
+        );
+    }
+    _;
+    }
+
 
     modifier receiverOnlyRole(bytes32 role, address receiver) {
         require(hasRole(role, receiver), "Caller is not valid receiver");
@@ -209,8 +221,8 @@ contract BC24 is
     ) public onlyManufacturerRole onlyTokenOwner(carcassId) returns (uint256) {
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
-
-        MeatData.createMeatData(tokenId, carcassId);
+        uint256 weight = 99; //hardcoded value !!
+        MeatData.createMeatData(tokenId, carcassId, weight);
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.Meat;
         _nextTokenId++;
@@ -219,11 +231,10 @@ contract BC24 is
     }
 
     function createManufacturedProduct(
-        uint256 meatId
-    ) public onlyManufacturerRole onlyTokenOwner(meatId) returns (uint256) {
+        uint256[] memory meatId
+    ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
-
         ManufacturedProductData.createProductData(tokenId, meatId);
         tokenOwners[tokenId] = msg.sender;
         tokenDataTypes[tokenId] = DataType.ManufacturedProduct;
@@ -231,6 +242,31 @@ contract BC24 is
         emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
         return tokenId;
     }
+
+function createManufacturedProductFromRecipe(
+    uint256 recipeId,
+    uint256[] memory meatIds
+) public onlyManufacturerRole onlyTokenOwnerList(meatIds) onlyTokenOwner(recipeId) returns (uint256) {
+    
+    // Créer le produit manufacturé avec les détails de la recette
+    uint256 tokenId = _nextTokenId;
+    _mint(msg.sender, tokenId, 1, "");
+
+    RecipeInfo memory recipe = getRecipe(recipeId);
+
+    for (uint256 i = 0; i < meatIds.length; i++) {
+            // Vérifier si la catégorie de viande correspond à celle requise dans la recette
+            require(MeatData.checkMeatCategory(meatIds[i], recipe.ingredientMeat[i].animalType), "Invalid meat category");
+            // Vérifier si le poids de la viande est suffisant
+            require(MeatData.checkMeatWeight(meatIds[i], recipe.ingredientMeat[i].weight), "Insufficient meat weight");
+            // Vérifier si la partie de la viande correspond à celle requise dans la recette
+            require(MeatData.checkMeatPart(meatIds[i], recipe.ingredientMeat[i].part), "Invalid meat part");
+    }
+
+
+
+    return 2;
+}
 
     /* Token Update functions */
 
@@ -317,7 +353,8 @@ contract BC24 is
         string memory countryOfCutting,
         uint256 dateOfCutting,
         string memory part,
-        bool isContaminated
+        bool isContaminated,
+        uint weight
     )
         public
         onlyManufacturerRole
@@ -330,7 +367,8 @@ contract BC24 is
             countryOfCutting,
             dateOfCutting,
             part,
-            isContaminated
+            isContaminated,
+            weight
         );
         emit MetaDataChanged(tokenId, msg.sender, "Meat info changed.");
         return "Meat info changed.";
@@ -397,13 +435,13 @@ contract BC24 is
 
     function getManufacturedProduct(
         uint256 tokenId
-    )
-        public
-        view
-        onlyTokenOwner(tokenId)
-        returns (ManufacturedProductInfo memory)
-    {
+    ) public view onlyTokenOwner(tokenId) returns (ManufacturedProductInfo memory) {
         return ManufacturedProductData.getManufacturedProductData(tokenId);
+    }
+
+    function getRecipe(uint256 tokenId
+    ) public view onlyTokenOwner(tokenId) returns (RecipeInfo memory){  
+        return RecipeData.getRecipeData(tokenId);
     }
 
     /* Token Transfer functions */
