@@ -268,32 +268,6 @@ contract BC24 is
         emit NFTMinted(tokenId, msg.sender, "Recipe created");
         return tokenId;
     }
-
-function createManufacturedProductFromRecipe(
-    uint256 recipeId,
-    uint256[] memory meatIds
-) public onlyManufacturerRole onlyTokenOwnerList(meatIds) onlyTokenOwner(recipeId) returns (uint256) {
-    
-    // Créer le produit manufacturé avec les détails de la recette
-    uint256 tokenId = _nextTokenId;
-    _mint(msg.sender, tokenId, 1, "");
-
-    RecipeInfo memory recipe = getRecipe(recipeId);
-
-    for (uint256 i = 0; i < meatIds.length; i++) {
-            // Vérifier si la catégorie de viande correspond à celle requise dans la recette
-            require(MeatData.checkMeatCategory(meatIds[i], recipe.ingredientMeat[i].animalType), "Invalid meat category");
-            // Vérifier si le poids de la viande est suffisant
-            require(MeatData.checkMeatWeight(meatIds[i], recipe.ingredientMeat[i].weight), "Insufficient meat weight");
-            // Vérifier si la partie de la viande correspond à celle requise dans la recette
-            require(MeatData.checkMeatPart(meatIds[i], recipe.ingredientMeat[i].part), "Invalid meat part");
-    }
-
-
-
-    return 2;
-}
-
     /* Token Update functions */
 
     function updateAnimal(

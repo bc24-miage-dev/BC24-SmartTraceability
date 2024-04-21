@@ -1,5 +1,3 @@
-
-
 import { expect, assert } from "chai";
 import { ethers, upgrades } from "hardhat";
 import { SetupService } from "./setupService";
@@ -50,7 +48,7 @@ describe("BC24-Manufactured-Product", function () {
       .transferToken(carcassId, manufacturer.address);
   });
 
-it("update manufacturedproduct data", async function () {
+  it("update manufacturedproduct data", async function () {
     const transaction = await contract
       .connect(manufacturer)
       .createMeat(carcassId);
@@ -97,3 +95,4 @@ it("update manufacturedproduct data", async function () {
   it("create new manufacturedProduct with recipe", async function () {
     expect(0).to.equal(1);
   });
+});
