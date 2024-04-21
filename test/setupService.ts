@@ -40,6 +40,20 @@ export class SetupService {
     ]);
     await carcassContract.waitForDeployment();
 
+    const TransportData = await ethers.getContractFactory("TransportData");
+    const transportContract = await upgrades.deployProxy(TransportData, [
+      this.defaultAdmin.address,
+    ]);
+    await transportContract.waitForDeployment();
+
+    // Déploiement du contrat MeatData
+    const MeatData = await ethers.getContractFactory("MeatData");
+    const meatContract = await upgrades.deployProxy(MeatData, [
+      this.defaultAdmin.address,
+    ]);
+    await meatContract.waitForDeployment();
+
+
 
     const RecipeContract = await ethers.getContractFactory("RecipeData");
     const recipeContract = await upgrades.deployProxy(RecipeContract, [
@@ -54,6 +68,8 @@ export class SetupService {
       await animalContract.getAddress(),
       await carcassContract.getAddress(),
       await recipeContract.getAddress(),
+      await meatContract.getAddress(),
+      await transportContract.getAddress(),
       /* add new contract addresses here */
     ]);
 

@@ -179,7 +179,7 @@ describe("BC24-Breeder", function () {
 
     await contract
       .connect(breeder)
-      .transferAnimalToTransporter(0, transporter.address);
+      .transferToken(0, transporter.address);
 
     await expect(contract.connect(breeder).getAnimal(0)).to.be.revertedWith(
       "Caller does not own this token"

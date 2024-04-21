@@ -66,7 +66,7 @@ contract BC24 is
     ICarcassData private carcassDataInstance;
     IRecipeData private recipeDataInstance;
     IMeatData private meatDataInstance;
-    ITransportData private transportDataInstance;   
+    ITransportData private transportDataInstance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -405,7 +405,12 @@ contract BC24 is
 
     function getTransport(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (ITransportData.TransportInfo memory) {
+    )
+        public
+        view
+        onlyTokenOwner(tokenId)
+        returns (ITransportData.TransportInfo memory)
+    {
         return transportDataInstance.getTransportData(tokenId);
     }
 
@@ -439,57 +444,14 @@ contract BC24 is
 
     /* Token Transfer functions */
 
-    function transferAnimalToTransporter(
+    function transferToken(
         uint256 tokenId,
-        address transporter
-    )
-        public
-        onlyBreederRole
-        onlyTokenOwner(tokenId)
-        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
-    {
-        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
-        tokenOwners[tokenId] = transporter;
-        transportDataInstance.createTransportData(tokenId);
-    }
-
-    function transferAnimalToSlaugtherer(
-        uint256 tokenId,
-        address slaughterer
-    )
-        public
-        onlyTransporterRole
-        onlyTokenOwner(tokenId)
-        receiverOnlyRole(SLAUGHTER_ROLE, slaughterer)
-    {
-        safeTransferFrom(msg.sender, slaughterer, tokenId, 1, "");
-        tokenOwners[tokenId] = slaughterer;
-    }
-
-    function transferCarcassToTransporter(
-        uint256 tokenId,
-        address transporter
-    )
-        public
-        onlySlaughterRole
-        onlyTokenOwner(tokenId)
-        receiverOnlyRole(TRANSPORTER_ROLE, transporter)
-    {
-        safeTransferFrom(msg.sender, transporter, tokenId, 1, "");
-        tokenOwners[tokenId] = transporter;
-    }
-
-    function transferCarcassToManufacturer(
-        uint256 tokenId,
-        address manufacturer
-    )
-        public
-        onlyTransporterRole
-        onlyTokenOwner(tokenId)
-        receiverOnlyRole(MANUFACTURERE_ROLE, manufacturer)
-    {
-        safeTransferFrom(msg.sender, manufacturer, tokenId, 1, "");
-        tokenOwners[tokenId] = manufacturer;
+        address receiver
+    ) public onlyTokenOwner(tokenId) {
+        safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
+        tokenOwners[tokenId] = receiver;
+        // TODO: Handle transporter get token vs give token
+        // transportDataInstance.createTransportData(tokenId);
     }
 
     /* Destroys a Token and its associated Metadata */

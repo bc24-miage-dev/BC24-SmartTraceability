@@ -24,14 +24,32 @@ async function main() {
   const carcassDataAddress = await carcassContract.getAddress();
   console.log(`Carcass Contract deployed to ${carcassDataAddress}`);
 
-  // Déploiement du contrat CarcassData
+  // Déploiement du contrat TransportData
+  const TransportData = await ethers.getContractFactory("TransportData");
+  const transportContract = await upgrades.deployProxy(TransportData, [
+    defaultAdmin,
+  ]);
+  await transportContract.waitForDeployment();
+  const transportDataAddress = await transportContract.getAddress();
+  console.log(`Transport Contract deployed to ${transportDataAddress}`);
+
+  // Déploiement du contrat MeatData
+  const MeatData = await ethers.getContractFactory("MeatData");
+  const meatContract = await upgrades.deployProxy(MeatData, [
+    defaultAdmin,
+  ]);
+  await meatContract.waitForDeployment();
+  const meatDataAddress = await meatContract.getAddress();
+  console.log(`Meat Contract deployed to ${meatDataAddress}`);
+
+  // Déploiement du contrat RecipeData
   const RecipeContract = await ethers.getContractFactory("RecipeData");
   const recipeContract = await upgrades.deployProxy(RecipeContract, [
     defaultAdmin,
   ]);
   await recipeContract.waitForDeployment();
   const recipeDataAddress = await recipeContract.getAddress();
-  console.log(`Carcass Contract deployed to ${recipeDataAddress}`);
+  console.log(`Recipe Contract deployed to ${recipeDataAddress}`);
 
   // Déploiement du contrat BC24 en utilisant les adresses des contrats déployés comme dépendances
   const ContractFactory = await ethers.getContractFactory("BC24");
@@ -39,7 +57,9 @@ async function main() {
     defaultAdmin,
     animalDataAddress,
     carcassDataAddress,
-    recipeDataAddress
+    recipeDataAddress,
+    meatDataAddress,
+    transportDataAddress,
   ]);
   await contract.waitForDeployment();
   const bc24Address = await contract.getAddress();

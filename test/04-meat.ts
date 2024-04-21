@@ -1,7 +1,7 @@
 import { expect, assert } from "chai";
 import { ethers, upgrades } from "hardhat";
 
-describe("BC24-Manufacturer", function () {
+describe("BC24-Meat", function () {
   let defaultAdmin: { address: unknown };
   let random: any;
   let transporter: any;
