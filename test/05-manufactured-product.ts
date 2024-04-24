@@ -32,15 +32,24 @@ describe("BC24-Manufactured-Product", function () {
     const transaction = await contract
       .connect(breeder)
       .createAnimal(breeder.address, "Cow", 10, "male");
-    animalId = transaction.value;
-    console.log(animalId)
+
+    const receipt = await transaction.wait();
+    animalId = receipt.logs[1].args[0];
+
+    console.log(animalId);
     await contract
       .connect(breeder)
       .transferToken(animalId, transporter.address);
-    const slaugtherTransaction = await contract
+    await contract
       .connect(transporter)
       .transferToken(animalId, slaughterer.address);
-    carcassId = slaugtherTransaction.value;
+
+    const slaugtherTransaction = await contract
+      .connect(slaughterer)
+      .slaughterAnimal(animalId);
+    const receiptSlaughter = await slaugtherTransaction.wait();
+    carcassId = receiptSlaughter.logs[1].args[0];
+
     await contract
       .connect(slaughterer)
       .transferToken(carcassId, transporter.address);
@@ -54,7 +63,17 @@ describe("BC24-Manufactured-Product", function () {
     const transaction = await contract
       .connect(manufacturer)
       .createMeat(carcassId);
-    const meatId = transaction.value;
+    // const meatId = transaction.value;
+    const receipt = await transaction.wait();
+    const meatId = receipt.logs[1].args[0];
+    // transaction receipt
+    console.log(receipt.logs)
+    // transaction event
+    console.log(receipt.logs[1])
+    // transaction event arguments
+    console.log(receipt.logs[1].args)
+    // emmited tokenId from the NFTMinted event
+    console.log(receipt.logs[1].args[0])
 
     expect(await contract.connect(manufacturer).ownerOf(meatId)).to.equal(
       manufacturer.address
@@ -65,13 +84,16 @@ describe("BC24-Manufactured-Product", function () {
     const transaction = await contract
       .connect(manufacturer)
       .createMeat(carcassId);
-    const meatId = transaction.value;
+
+    const receipt = await transaction.wait();
+
+    const meatId = receipt.logs[1].args[0];
 
     const productTranscation = await contract
       .connect(manufacturer)
       .createManufacturedProductData([meatId])
       .to.emit(contract, "NFTMinted")
-      .withArgs("Caller does not own one of the tokens")
+      .withArgs("Caller does not own one of the tokens");
   });
 
   it("update manufacturedproduct data", async function () {
@@ -82,7 +104,7 @@ describe("BC24-Manufactured-Product", function () {
 
     const productTranscation = await contract
       .connect(manufacturer)
-      .createManufacturedProductData([meatId])
+      .createManufacturedProductData([meatId]);
 
     const manufacturedProductId = productTranscation.value;
     const productName = "Schnitzel";

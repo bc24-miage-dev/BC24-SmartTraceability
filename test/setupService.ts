@@ -63,7 +63,7 @@ export class SetupService {
     ]);
     await recipeContract.waitForDeployment();
 
-    const ManufacturedProductContract = await ethers.getContractFactory("RecipeData");
+    const ManufacturedProductContract = await ethers.getContractFactory("ManufacturedProductData");
     const manufacturedProductContract = await upgrades.deployProxy(ManufacturedProductContract, [
       this.defaultAdmin.address,
     ]);

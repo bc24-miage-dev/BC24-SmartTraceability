@@ -114,27 +114,38 @@ describe("BC24-Meat", function () {
     );
   });
 
-
   it("create manufactured product", async function () {
+    let meatIds: any[] = [];
+
     const transaction = await contract
       .connect(manufacturer)
       .createMeat(carcassId);
-    const meatId = transaction.value;
+
+    const receipt = await transaction.wait();
 
     const transaction2 = await contract
       .connect(manufacturer)
       .createMeat(carcassId);
-    const meatId2 = transaction.value;
+
+    const receipt2 = await transaction2.wait();
+
+    const transaction3 = await contract
+      .connect(manufacturer)
+      .createMeat(carcassId);
+
+    const receipt3 = await transaction3.wait();
+    meatIds.push();
+
+    meatIds.push(receipt.logs[1].args[0]);
+    meatIds.push(receipt2.logs[1].args[0]);
+    meatIds.push(receipt3.logs[1].args[0]);
 
     expect(
       await contract
         .connect(manufacturer)
-        .createManufacturedProductData([meatId,meatId2])
+        .createManufacturedProductData(meatIds)
     )
-    .to.emit(contract, "NFTMinted")
-    .withArgs(1n, manufacturer.address, "ManufacturedProduct created");      
+      .to.emit(contract, "NFTMinted")
+      .withArgs(5n, manufacturer.address, "ManufacturedProduct created");
   });
-
-
- 
 });
