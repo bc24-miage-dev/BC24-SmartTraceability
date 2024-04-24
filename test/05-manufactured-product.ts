@@ -33,6 +33,7 @@ describe("BC24-Manufactured-Product", function () {
       .connect(breeder)
       .createAnimal(breeder.address, "Cow", 10, "male");
     animalId = transaction.value;
+    console.log(animalId)
     await contract
       .connect(breeder)
       .transferToken(animalId, transporter.address);
@@ -48,18 +49,42 @@ describe("BC24-Manufactured-Product", function () {
       .transferToken(carcassId, manufacturer.address);
   });
 
-  it("update manufacturedproduct data", async function () {
+  it("Test ownershipcreate", async function () {
+    // expect(await contract.uri(0)).to.equal("");
     const transaction = await contract
       .connect(manufacturer)
       .createMeat(carcassId);
+    const meatId = transaction.value;
 
+    expect(await contract.connect(manufacturer).ownerOf(meatId)).to.equal(
+      manufacturer.address
+    );
+  });
+
+  it("create manufacturedproduct data", async function () {
+    const transaction = await contract
+      .connect(manufacturer)
+      .createMeat(carcassId);
     const meatId = transaction.value;
 
     const productTranscation = await contract
       .connect(manufacturer)
-      .createManufacturedProduct(meatId);
-    const manufacturedProductId = productTranscation.value;
+      .createManufacturedProductData([meatId])
+      .to.emit(contract, "NFTMinted")
+      .withArgs("Caller does not own one of the tokens")
+  });
 
+  it("update manufacturedproduct data", async function () {
+    const transaction = await contract
+      .connect(manufacturer)
+      .createMeat(carcassId);
+    const meatId = transaction.value;
+
+    const productTranscation = await contract
+      .connect(manufacturer)
+      .createManufacturedProductData([meatId])
+
+    const manufacturedProductId = productTranscation.value;
     const productName = "Schnitzel";
     const dateOfManufacturation = 1622524800;
     const price = 50;

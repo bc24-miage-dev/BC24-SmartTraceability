@@ -1,21 +1,41 @@
 pragma solidity ^0.8.0;
-import "./BaseData.sol";
 
-abstract contract ManufacturedProductData is BaseData {
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155BurnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-    struct ManufacturedProductInfo {
-        uint256 dateOfManufacturation;
-        string productName;
-        TimingInfo timingInfo;
-        uint256[] meatIds; // Changer meatId en une liste de uint
-        uint256 price;
-        string description;
-        string category;
+import "./interfaces/IManufacturedProductData.sol";
+
+contract ManufacturedProductData is 
+    Initializable,
+    ERC1155Upgradeable,
+    AccessControlUpgradeable,
+    ERC1155BurnableUpgradeable,
+    UUPSUpgradeable,
+    IManufacturedProductData 
+{
+        
+    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
     }
 
-    mapping(uint256 => ManufacturedProductInfo) private _tokenProductData;
+    function initialize(address defaultAdmin) public initializer {
+        __ERC1155_init("");
+        __AccessControl_init();
+        __ERC1155Burnable_init();
+        __UUPSUpgradeable_init();
 
-    function createProductData(uint256 tokenId, uint256[] memory meatIds) internal {
+        _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+    }
+
+    mapping(uint256 => IManufacturedProductData.ManufacturedProductInfo) private _tokenProductData;
+
+    function createManufacturedProduct(uint256 tokenId, uint256[] memory meatIds) external {
         ManufacturedProductInfo storage product = _tokenProductData[tokenId];
         product.meatIds = meatIds;
         product.timingInfo.creationDate = block.timestamp;
@@ -28,7 +48,7 @@ abstract contract ManufacturedProductData is BaseData {
         string memory productName,
         uint256 price,
         string memory description
-    ) internal {
+    ) external {
         // Créer une nouvelle instance de produit manufacturé
         ManufacturedProductInfo storage product = _tokenProductData[tokenId];
 
@@ -47,7 +67,7 @@ abstract contract ManufacturedProductData is BaseData {
         string memory productName,
         uint256 price,
         string memory description
-    ) internal {
+    ) external {
         ManufacturedProductInfo storage product = _tokenProductData[tokenId];
         product.dateOfManufacturation = dateOfManufacturation;
         product.productName = productName;
@@ -58,7 +78,18 @@ abstract contract ManufacturedProductData is BaseData {
 
     function getManufacturedProductData(
         uint256 tokenId
-    ) internal view returns (ManufacturedProductInfo memory) {
+    ) external view returns (ManufacturedProductInfo memory) {
         return _tokenProductData[tokenId];
     }
+
+    function supportsInterface(
+    bytes4 interfaceId
+    )
+        public
+        view
+        override(AccessControlUpgradeable, ERC1155Upgradeable)
+        returns (bool)
+    {}
+    
+    function _authorizeUpgrade(address newImplementation) internal virtual override {}
 }

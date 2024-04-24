@@ -63,6 +63,12 @@ export class SetupService {
     ]);
     await recipeContract.waitForDeployment();
 
+    const ManufacturedProductContract = await ethers.getContractFactory("RecipeData");
+    const manufacturedProductContract = await upgrades.deployProxy(ManufacturedProductContract, [
+      this.defaultAdmin.address,
+    ]);
+    await manufacturedProductContract.waitForDeployment();
+
     /* This is the main contract that takes all the addresses of the other contracst */
     const BC24Contract = await ethers.getContractFactory("BC24");
     this.contract = await upgrades.deployProxy(BC24Contract, [
@@ -72,6 +78,7 @@ export class SetupService {
       await recipeContract.getAddress(),
       await meatContract.getAddress(),
       await transportContract.getAddress(),
+      await manufacturedProductContract.getAddress()
       /* add new contract addresses here */
     ]);
 

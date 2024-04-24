@@ -78,11 +78,7 @@ contract CarcassData is
     function supportsInterface(
         bytes4 interfaceId
     )
-        public
-        view
-        override(AccessControlUpgradeable, ERC1155Upgradeable)
-        returns (bool)
-    {}
+        public view override(AccessControlUpgradeable, ERC1155Upgradeable) returns (bool){}
 
     function _authorizeUpgrade(
         address newImplementation

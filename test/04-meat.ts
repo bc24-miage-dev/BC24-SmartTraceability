@@ -102,42 +102,39 @@ describe("BC24-Meat", function () {
     expect(meat.dateOfCutting).to.equal(dateOfCutting);
   });
 
+  it("Test ownershipcreate", async function () {
+    expect(await contract.uri(0)).to.equal("");
+    const transaction = await contract
+      .connect(manufacturer)
+      .createMeat(carcassId);
+    const meatId = transaction.value;
+
+    expect(await contract.connect(manufacturer).ownerOf(meatId)).to.equal(
+      manufacturer.address
+    );
+  });
+
+
   it("create manufactured product", async function () {
     const transaction = await contract
       .connect(manufacturer)
       .createMeat(carcassId);
-
     const meatId = transaction.value;
 
-    const agreementNumber = 1;
-    const countryOfCutting = "Schweiz";
-    const dateOfCutting = 1622524800;
-    const part = "Tongue";
-    const isContaminated = false;
-    const weight = 100;
+    const transaction2 = await contract
+      .connect(manufacturer)
+      .createMeat(carcassId);
+    const meatId2 = transaction.value;
 
-    await expect(
+    expect(
       await contract
         .connect(manufacturer)
-        .updateMeat(
-          meatId,
-          agreementNumber,
-          countryOfCutting,
-          dateOfCutting,
-          part,
-          isContaminated,
-          weight
-        )
+        .createManufacturedProductData([meatId,meatId2])
     )
-      .to.emit(contract, "MetaDataChanged")
-      .withArgs(meatId, manufacturer.address, "Meat info changed.");
-
-    await expect(
-      await contract.connect(manufacturer).createManufacturedProduct(meatId)
-    )
-      .to.emit(contract, "NFTMinted")
-      .withArgs(1n, manufacturer.address, "ManufacturedProduct created");
+    .to.emit(contract, "NFTMinted")
+    .withArgs(1n, manufacturer.address, "ManufacturedProduct created");      
   });
+
 
  
 });

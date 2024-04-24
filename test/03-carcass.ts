@@ -142,11 +142,11 @@ describe("BC24-Carcass", function () {
     const transaction = await contract
       .connect(slaughterer)
       .slaughterAnimal(animalId);
-    const carcassId = transaction.value;
+    let carcassId = transaction.value;
 
     await contract
       .connect(slaughterer)
-      .transferCarcassToTransporter(carcassId, transporter.address);
+      .transferToken(carcassId, transporter.address); ////todo fonction qui transfer que si bc pas impl, receiverOnlyRole not used
 
     expect(await contract.connect(transporter).ownerOf(carcassId)).to.equal(
       transporter.address
@@ -162,7 +162,7 @@ describe("BC24-Carcass", function () {
     await expect(
       contract
         .connect(slaughterer)
-        .transferCarcassToTransporter(carcassId, breeder.address)
+        .transferToken(carcassId, breeder.address) //todo fonction qui transfer que si bc pas impl, receiverOnlyRole not used
     ).to.be.revertedWith("Caller is not valid receiver");
   });
 });

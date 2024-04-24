@@ -8,15 +8,12 @@ import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155Burn
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
-import "./TransportData.sol";
-import "./MeatData.sol";
-import "./ManufacturedProductData.sol";
-
 import "./interfaces/IAnimalData.sol";
 import "./interfaces/ICarcassData.sol";
 import "./interfaces/IRecipeData.sol";
 import "./interfaces/IMeatData.sol";
 import "./interfaces/ITransportData.sol";
+import "./interfaces/IManufacturedProductData.sol";
 
 import "./libraries/utils.sol";
 
@@ -26,14 +23,12 @@ contract BC24 is
     ERC1155Upgradeable,
     AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
-    UUPSUpgradeable,
-    ManufacturedProductData
+    UUPSUpgradeable
 {
     using Utils for string;
 
     //general roles
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-
     // specific roles
     bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
     bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE");
@@ -63,6 +58,7 @@ contract BC24 is
     IRecipeData private recipeDataInstance;
     IMeatData private meatDataInstance;
     ITransportData private transportDataInstance;
+    IManufacturedProductData private manufacturedProductDataInstance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -75,7 +71,8 @@ contract BC24 is
         address carcassDataAdress,
         address recipeDataAddress,
         address meatDataAddress,
-        address transportDataAddress
+        address transportDataAddress,
+        address manufacturedProductDataAdress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -88,6 +85,7 @@ contract BC24 is
         recipeDataInstance = IRecipeData(recipeDataAddress);
         meatDataInstance = IMeatData(meatDataAddress);
         transportDataInstance = ITransportData(transportDataAddress);
+        manufacturedProductDataInstance = IManufacturedProductData(manufacturedProductDataAdress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -143,7 +141,7 @@ contract BC24 is
         _;
     }
 
-    modifier receiverOnlyRole(bytes32 role, address receiver) {
+    modifier receiverOnlyRole(bytes32 role, address receiver) { //not used to impl
         require(hasRole(role, receiver), "Caller is not valid receiver");
         _;
     }
@@ -234,12 +232,12 @@ contract BC24 is
         return tokenId;
     }
 
-    function createManufacturedProduct(
+    function createManufacturedProductData(
         uint256[] memory meatId
     ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
-        ManufacturedProductData.createProductData(tokenId, meatId);
+        manufacturedProductDataInstance.createManufacturedProduct(tokenId, meatId);
         tokenOwners[tokenId] = msg.sender;
         tokenCategoryTypes[tokenId] = Utils.CategoryType.ManufacturedProduct;
         _nextTokenId++;
@@ -382,7 +380,7 @@ contract BC24 is
         onlyTokenOwner(tokenId)
         returns (string memory)
     {
-        ManufacturedProductData.setManufacturedProductData(
+        manufacturedProductDataInstance.setManufacturedProductData(
             tokenId,
             dateOfManufacturation,
             productName,
@@ -440,8 +438,8 @@ contract BC24 is
 
     function getManufacturedProduct(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (ManufacturedProductInfo memory) {
-        return ManufacturedProductData.getManufacturedProductData(tokenId);
+    ) public view onlyTokenOwner(tokenId) returns (IManufacturedProductData.ManufacturedProductInfo memory) {
+        return manufacturedProductDataInstance.getManufacturedProductData(tokenId);
     }
 
     function getRecipe(
