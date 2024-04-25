@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./interfaces/IAnimalData.sol";
 
-
 contract AnimalData is
     Initializable,
     ERC1155Upgradeable,
@@ -35,12 +34,19 @@ contract AnimalData is
 
     mapping(uint256 => IAnimalData.AnimalInfo) private _tokenAnimalData;
 
-    function createAnimalData(uint256 tokenId, string memory name) external {
+    function createAnimalData(
+        uint256 tokenId,
+        string memory animalType,
+        string memory gender,
+        uint256 weight
+    ) external {
         AnimalInfo storage animalInfo = _tokenAnimalData[tokenId];
         animalInfo.timingInfo.creationDate = block.timestamp;
         animalInfo.category = "Animal";
         animalInfo.isLifeCycleOver = false;
-        animalInfo.animalType = name;
+        animalInfo.weight = weight;
+        animalInfo.gender = gender;
+        animalInfo.animalType = animalType;
     }
 
     function setAnimalData(
@@ -133,11 +139,4 @@ contract AnimalData is
     function _authorizeUpgrade(
         address newImplementation
     ) internal virtual override {}
-
-    function createAnimalData(
-        uint256 tokenId,
-        string memory animalType,
-        uint256 weight,
-        string memory gender
-    ) external override {}
 }

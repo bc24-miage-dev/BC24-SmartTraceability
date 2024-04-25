@@ -17,9 +17,7 @@ interface IManufacturedProductData {
         string category;
     }
 
-    function createManufacturedProduct(uint256 tokenId, uint256[] memory meatIds) external;
-
-    function createManufacturedProductAll(
+    function createManufacturedProductData(
         uint256 tokenId,
         uint256[] memory meatIds,
         string memory productName,

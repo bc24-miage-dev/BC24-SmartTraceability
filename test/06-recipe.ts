@@ -115,14 +115,18 @@ describe("BC24-Meat", function () {
       .connect(manufacturer)
       .createRecipe(recipeName, description, ingredientMeat, ingredientPart);
 
-    const receipt = await transaction.wait();
+    await transaction.wait();
 
     const recipe = await contract.connect(manufacturer).getRecipe(recipeId);
 
     expect(await recipe.recipeName).to.equal(recipeName);
     expect(await recipe.description).to.equal(description);
-    expect(await recipe.ingredientMeat[0].animalType).to.equal(ingredientMeat[0]);
-    expect(await recipe.ingredientMeat[1].animalType).to.equal(ingredientMeat[1]);
+    expect(await recipe.ingredientMeat[0].animalType).to.equal(
+      ingredientMeat[0]
+    );
+    expect(await recipe.ingredientMeat[1].animalType).to.equal(
+      ingredientMeat[1]
+    );
     expect(await recipe.ingredientMeat[0].part).to.equal(ingredientPart[0]);
     expect(await recipe.ingredientMeat[1].part).to.equal(ingredientPart[1]);
   });

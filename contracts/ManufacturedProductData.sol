@@ -8,15 +8,14 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./interfaces/IManufacturedProductData.sol";
 
-contract ManufacturedProductData is 
+contract ManufacturedProductData is
     Initializable,
     ERC1155Upgradeable,
     AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable,
-    IManufacturedProductData 
+    IManufacturedProductData
 {
-        
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
 
     /// @custom:oz-upgrades-unsafe-allow constructor
@@ -33,16 +32,11 @@ contract ManufacturedProductData is
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
     }
 
-    mapping(uint256 => IManufacturedProductData.ManufacturedProductInfo) private _tokenProductData;
+    mapping(uint256 => IManufacturedProductData.ManufacturedProductInfo)
+        private _tokenProductData;
 
-    function createManufacturedProduct(uint256 tokenId, uint256[] memory meatIds) external {
-        ManufacturedProductInfo storage product = _tokenProductData[tokenId];
-        product.meatIds = meatIds;
-        product.timingInfo.creationDate = block.timestamp;
-        product.category = "ManufacturedProduct";
-    }
 
-    function createManufacturedProductAll(
+    function createManufacturedProductData(
         uint256 tokenId,
         uint256[] memory meatIds,
         string memory productName,
@@ -72,7 +66,7 @@ contract ManufacturedProductData is
         product.dateOfManufacturation = dateOfManufacturation;
         product.productName = productName;
         product.timingInfo.lastUpdateDate = block.timestamp;
-        product.price = price; 
+        product.price = price;
         product.description = description;
     }
 
@@ -83,13 +77,15 @@ contract ManufacturedProductData is
     }
 
     function supportsInterface(
-    bytes4 interfaceId
+        bytes4 interfaceId
     )
         public
         view
         override(AccessControlUpgradeable, ERC1155Upgradeable)
         returns (bool)
     {}
-    
-    function _authorizeUpgrade(address newImplementation) internal virtual override {}
+
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal virtual override {}
 }

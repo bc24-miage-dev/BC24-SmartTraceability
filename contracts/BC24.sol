@@ -74,7 +74,9 @@ contract BC24 is
         recipeDataInstance = IRecipeData(recipeDataAddress);
         meatDataInstance = IMeatData(meatDataAddress);
         transportDataInstance = ITransportData(transportDataAddress);
-        manufacturedProductDataInstance = IManufacturedProductData(manufacturedProductDataAdress);
+        manufacturedProductDataInstance = IManufacturedProductData(
+            manufacturedProductDataAdress
+        );
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -154,8 +156,8 @@ contract BC24 is
         animalDataInstance.createAnimalData(
             tokenId,
             animalType,
-            weight,
-            gender
+            gender,
+            weight
         );
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
@@ -195,11 +197,36 @@ contract BC24 is
     }
 
     function createManufacturedProductData(
-        uint256[] memory meatId
+        uint256 recipeId,
+        uint256[] memory meatId,
+        string memory productName,
+        uint256 price,
+        string memory description
     ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
         uint256 tokenId = _nextTokenId;
         _mint(msg.sender, tokenId, 1, "");
-        manufacturedProductDataInstance.createManufacturedProduct(tokenId, meatId);
+        if (recipeId == 0) {
+            //create a new product
+            manufacturedProductDataInstance.createManufacturedProductData(
+                tokenId,
+                meatId,
+                productName,
+                price,
+                description
+            );
+        } else {
+            //create a product from a recipe
+            IRecipeData.RecipeInfo memory recipe = recipeDataInstance
+                .getRecipeData(recipeId);
+            manufacturedProductDataInstance.createManufacturedProductData(
+                tokenId,
+                meatId,
+                recipe.recipeName,
+                price,
+                recipe.recipeName
+            );
+        }
+
         tokenOwners[tokenId] = msg.sender;
         tokenCategoryTypes[tokenId] = CategoryTypes.Types.ManufacturedProduct;
         _nextTokenId++;
@@ -362,57 +389,42 @@ contract BC24 is
 
     function getAnimal(
         uint256 tokenId
-    )
-        public
-        view
-        onlyTokenOwner(tokenId)
-        returns (IAnimalData.AnimalInfo memory)
-    {
+    ) public view returns (IAnimalData.AnimalInfo memory) {
         return animalDataInstance.getAnimalData(tokenId);
     }
 
     function getCarcass(
         uint256 tokenId
-    )
-        public
-        view
-        onlyTokenOwner(tokenId)
-        returns (ICarcassData.CarcassInfo memory)
-    {
+    ) public view returns (ICarcassData.CarcassInfo memory) {
         return carcassDataInstance.getCarcassData(tokenId);
     }
 
     function getTransport(
         uint256 tokenId
-    )
-        public
-        view
-        onlyTokenOwner(tokenId)
-        returns (ITransportData.TransportInfo memory)
-    {
+    ) public view returns (ITransportData.TransportInfo memory) {
         return transportDataInstance.getTransportData(tokenId);
     }
 
     function getMeat(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (IMeatData.MeatInfo memory) {
+    ) public view returns (IMeatData.MeatInfo memory) {
         return meatDataInstance.getMeatData(tokenId);
     }
 
     function getManufacturedProduct(
         uint256 tokenId
-    ) public view onlyTokenOwner(tokenId) returns (IManufacturedProductData.ManufacturedProductInfo memory) {
-        return manufacturedProductDataInstance.getManufacturedProductData(tokenId);
+    )
+        public
+        view
+        returns (IManufacturedProductData.ManufacturedProductInfo memory)
+    {
+        return
+            manufacturedProductDataInstance.getManufacturedProductData(tokenId);
     }
 
     function getRecipe(
         uint256 tokenId
-    )
-        public
-        view
-        onlyTokenOwner(tokenId)
-        returns (IRecipeData.RecipeInfo memory)
-    {
+    ) public view returns (IRecipeData.RecipeInfo memory) {
         return recipeDataInstance.getRecipeData(tokenId);
     }
 
