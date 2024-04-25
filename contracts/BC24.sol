@@ -15,7 +15,8 @@ import "./interfaces/IMeatData.sol";
 import "./interfaces/ITransportData.sol";
 import "./interfaces/IManufacturedProductData.sol";
 
-import "./libraries/utils.sol";
+import "./libraries/categoryTypes.sol";
+import "./libraries/roleAccess.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -25,27 +26,15 @@ contract BC24 is
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable
 {
-    using Utils for string;
-
-    //general roles
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    // specific roles
-    bytes32 public constant BREEDER_ROLE = keccak256("BREEDER_ROLE");
-    bytes32 public constant TRANSPORTER_ROLE = keccak256("TRANSPORTER_ROLE");
-    bytes32 public constant SLAUGHTER_ROLE = keccak256("SLAUGHTER_ROLE");
-    bytes32 public constant MANUFACTURERE_ROLE =
-        keccak256("MANUFACTURERE_ROLE");
-
-    // other roles
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
-    bytes32 public constant TOKEN_OWNER_ROLE = keccak256("OWNER_ROLE");
+    using CategoryTypes for string;
+    using RoleAccess for bytes32;
 
     uint256 private _nextTokenId;
     mapping(uint256 => address) private tokenOwners;
 
     // Add this to your contract
 
-    mapping(uint256 => Utils.CategoryType) public tokenCategoryTypes;
+    mapping(uint256 => CategoryTypes.Types) public tokenCategoryTypes;
 
     //emits an event when a new token is created
     event NFTMinted(uint256 tokenId, address owner, string message);
@@ -90,22 +79,24 @@ contract BC24 is
 
     /* Not directly needed at the moment since we need to define it.  */
     modifier onlyBreederRole() {
-        require(hasRole(BREEDER_ROLE, msg.sender), "Caller is not a breeder");
+        require(
+            hasRole(RoleAccess.BREEDER_ROLE, msg.sender),
+            "Caller is not a breeder"
+        );
         _;
     }
 
     modifier onlyTransporterRole() {
         require(
-            hasRole(TRANSPORTER_ROLE, msg.sender),
+            hasRole(RoleAccess.TRANSPORTER_ROLE, msg.sender),
             "Caller is not a transporter"
         );
         _;
     }
-    
 
     modifier onlySlaughterRole() {
         require(
-            hasRole(SLAUGHTER_ROLE, msg.sender),
+            hasRole(RoleAccess.SLAUGHTER_ROLE, msg.sender),
             "Caller is not a slaughterer"
         );
         _;
@@ -113,14 +104,17 @@ contract BC24 is
 
     modifier onlyManufacturerRole() {
         require(
-            hasRole(MANUFACTURERE_ROLE, msg.sender),
+            hasRole(RoleAccess.MANUFACTURERE_ROLE, msg.sender),
             "Caller is not a slaughterer"
         );
         _;
     }
 
     modifier onlyMinterRole() {
-        require(hasRole(MINTER_ROLE, msg.sender), "Caller is not a minter");
+        require(
+            hasRole(RoleAccess.MINTER_ROLE, msg.sender),
+            "Caller is not a minter"
+        );
         _;
     }
 
@@ -141,43 +135,11 @@ contract BC24 is
         _;
     }
 
-    modifier receiverOnlyRole(bytes32 role, address receiver) { //not used to impl
-        require(hasRole(role, receiver), "Caller is not valid receiver");
-        _;
-    }
-
     function grantRoleToAddress(
         address account,
         string memory role
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (
-            keccak256(abi.encodePacked(role)) ==
-            keccak256(abi.encodePacked("MINTER_ROLE"))
-        ) {
-            grantRole(MINTER_ROLE, account);
-        } else if (
-            keccak256(abi.encodePacked(role)) ==
-            keccak256(abi.encodePacked("BREEDER_ROLE"))
-        ) {
-            grantRole(BREEDER_ROLE, account);
-        } else if (
-            keccak256(abi.encodePacked(role)) ==
-            keccak256(abi.encodePacked("TRANSPORTER_ROLE"))
-        ) {
-            grantRole(TRANSPORTER_ROLE, account);
-        } else if (
-            keccak256(abi.encodePacked(role)) ==
-            keccak256(abi.encodePacked("SLAUGHTER_ROLE"))
-        ) {
-            grantRole(SLAUGHTER_ROLE, account);
-        } else if (
-            keccak256(abi.encodePacked(role)) ==
-            keccak256(abi.encodePacked("MANUFACTURERE_ROLE"))
-        ) {
-            grantRole(MANUFACTURERE_ROLE, account);
-        } else {
-            revert("Invalid role");
-        }
+        grantRole(RoleAccess.getRoleFromString(role), account);
     }
 
     /* Token Creation functions */
@@ -197,7 +159,7 @@ contract BC24 is
         );
         _mint(account, tokenId, 1, "");
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = Utils.CategoryType.Animal;
+        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Animal;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "AnimalNFT created");
         return tokenId;
@@ -212,7 +174,7 @@ contract BC24 is
         _mint(msg.sender, tokenId, 1, "");
         carcassDataInstance.createCarcassData(tokenId, animalId);
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = Utils.CategoryType.Carcass;
+        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Carcass;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
         return tokenId;
@@ -226,7 +188,7 @@ contract BC24 is
         uint256 weight = 99; //hardcoded value !!
         meatDataInstance.createMeatData(tokenId, carcassId, weight);
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = Utils.CategoryType.Meat;
+        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Meat;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "MeatNFT created");
         return tokenId;
@@ -239,7 +201,7 @@ contract BC24 is
         _mint(msg.sender, tokenId, 1, "");
         manufacturedProductDataInstance.createManufacturedProduct(tokenId, meatId);
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = Utils.CategoryType.ManufacturedProduct;
+        tokenCategoryTypes[tokenId] = CategoryTypes.Types.ManufacturedProduct;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
         return tokenId;
@@ -261,11 +223,12 @@ contract BC24 is
             ingredientPart
         );
         tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = Utils.CategoryType.Recipe;
+        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Recipe;
         _nextTokenId++;
         emit NFTMinted(tokenId, msg.sender, "Recipe created");
         return tokenId;
     }
+
     /* Token Update functions */
 
     function updateAnimal(
@@ -473,7 +436,7 @@ contract BC24 is
     /* Automatically created solidity functions */
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyRole(UPGRADER_ROLE) {}
+    ) internal override onlyRole(RoleAccess.UPGRADER_ROLE) {}
 
     function supportsInterface(
         bytes4 interfaceId
@@ -489,7 +452,6 @@ contract BC24 is
     function ownerOf(uint256 tokenId) public view returns (address) {
         return tokenOwners[tokenId];
     }
-
 
     function getTokensOfOwner() public view returns (uint256[] memory) {
         uint256[] memory result = new uint256[](_nextTokenId);
@@ -510,14 +472,14 @@ contract BC24 is
 
     function getTokenDataType(
         uint256 tokenId
-    ) public view returns (Utils.CategoryType) {
+    ) public view returns (CategoryTypes.Types) {
         return tokenCategoryTypes[tokenId];
     }
 
     function getTokensByDataType(
         string memory _dataType
     ) public view returns (uint256[] memory) {
-        Utils.CategoryType dataType = _dataType.stringToDataType();
+        CategoryTypes.Types dataType = _dataType.stringToDataType();
         uint256[] memory result = new uint256[](_nextTokenId);
         uint256 counter = 0;
         for (uint256 i = 0; i < _nextTokenId; i++) {
