@@ -7,4 +7,11 @@ library Utils {
     ) internal pure returns (bool) {
         return keccak256(bytes(a)) == keccak256(bytes(b));
     }
+
+    function compareArrayLength(
+        uint256 a,
+        uint256 b
+    ) internal pure returns (bool) {
+        return a == b;
+    }
 }

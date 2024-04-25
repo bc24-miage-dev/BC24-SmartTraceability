@@ -196,7 +196,42 @@ describe("BC24-Manufactured-Product", function () {
     expect(checkIMeat).to.equal(false);
   });
 
-  it("should not allow to create manufacturedProduct with recipe", async function () {
+  it("should not allow to create manufacturedProduct with recipe if wrong meat is present", async function () {
+    await expect(
+      contract
+        .connect(manufacturer)
+        .createManufacturedProductData(recipeId, [meatId, meatId2], "", 50, "")
+    ).to.be.revertedWith("Meat is not valid for the recipe");
+  });
+
+  it("should not allow to create manufacturedProduct with recipe if not all meat is present", async function () {
+    await expect(
+      contract
+        .connect(manufacturer)
+        .createManufacturedProductData(recipeId, [meatId2], "", 50, "")
+    ).to.be.revertedWith("Meat is not valid for the recipe");
+  });
+
+  it("should allow to create manufacturedProduct with recipe ", async function () {
+    const agreementNumber = "2222";
+    const countryOfCutting = "Schweiz";
+    const dateOfCutting = 1622524800;
+    const part = "Eye";
+    const isContaminated = false;
+    const weight = 100;
+
+    await contract
+      .connect(manufacturer)
+      .updateMeat(
+        meatId2,
+        agreementNumber,
+        countryOfCutting,
+        dateOfCutting,
+        part,
+        isContaminated,
+        weight
+      );
+
     const productTranscation = await contract
       .connect(manufacturer)
       .createManufacturedProductData(recipeId, [meatId, meatId2], "", 50, "");

@@ -7,6 +7,7 @@ import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol"
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155BurnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "./interfaces/IAnimalData.sol";
 import "./interfaces/ICarcassData.sol";
@@ -205,9 +206,10 @@ contract BC24 is
         string memory description
     ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
         uint256 tokenId = _nextTokenId;
-        _mint(msg.sender, tokenId, 1, "");
+
         if (recipeId == 0) {
             //create a new product
+            _mint(msg.sender, tokenId, 1, "");
             manufacturedProductDataInstance.createManufacturedProductData(
                 tokenId,
                 meatId,
@@ -216,9 +218,6 @@ contract BC24 is
                 description
             );
         } else {
-            //create a product from a recipe
-
-            //make sure all meats are valid for the recipe
             for (uint256 i = 0; i < meatId.length; i++) {
                 require(
                     checkIfMeatCanBeUsedForRecipe(recipeId, meatId[i]),
@@ -227,6 +226,17 @@ contract BC24 is
             }
             IRecipeData.RecipeInfo memory recipe = recipeDataInstance
                 .getRecipeData(recipeId);
+
+            require(
+                Utils.compareArrayLength(
+                    meatId.length,
+                    recipe.ingredientMeat.length
+                ),
+                "Meat count does not match recipe"
+            );
+
+            _mint(msg.sender, tokenId, 1, "");
+
             manufacturedProductDataInstance.createManufacturedProductData(
                 tokenId,
                 meatId,
