@@ -102,7 +102,7 @@ describe("BC24-Manufactured-Product", function () {
         "2222",
         countryOfCutting,
         dateOfCutting,
-        "eye",
+        "Ribeye",
         isContaminated,
         weight
       );
@@ -111,7 +111,7 @@ describe("BC24-Manufactured-Product", function () {
     const description: string = "Rindfleischsuppe mit Gemüse";
     // These need to allign with the meat parts
     const ingredientMeat: string[] = ["Cow", "Cow"];
-    const ingredientPart: string[] = ["Tongue", "eye"];
+    const ingredientPart: string[] = ["Tongue", "Eye"];
 
     const recepiTransaction = await contract
       .connect(manufacturer)
@@ -180,7 +180,23 @@ describe("BC24-Manufactured-Product", function () {
     );
   });
 
-  it("create new manufacturedProduct with recipe", async function () {
+  it("should show that meat is part of recipe", async function () {
+    const checkIMeat = await contract
+      .connect(manufacturer)
+      .checkIfMeatCanBeUsedForRecipe(recipeId, meatId);
+
+    expect(checkIMeat).to.equal(true);
+  });
+
+  it("should show that meat is not part of recipe", async function () {
+    const checkIMeat = await contract
+      .connect(manufacturer)
+      .checkIfMeatCanBeUsedForRecipe(recipeId, meatId2);
+
+    expect(checkIMeat).to.equal(false);
+  });
+
+  it("should not allow to create manufacturedProduct with recipe", async function () {
     const productTranscation = await contract
       .connect(manufacturer)
       .createManufacturedProductData(recipeId, [meatId, meatId2], "", 50, "");

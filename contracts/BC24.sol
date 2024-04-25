@@ -17,6 +17,7 @@ import "./interfaces/IManufacturedProductData.sol";
 
 import "./libraries/categoryTypes.sol";
 import "./libraries/roleAccess.sol";
+import "./libraries/utils.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
@@ -216,6 +217,14 @@ contract BC24 is
             );
         } else {
             //create a product from a recipe
+
+            //make sure all meats are valid for the recipe
+            for (uint256 i = 0; i < meatId.length; i++) {
+                require(
+                    checkIfMeatCanBeUsedForRecipe(recipeId, meatId[i]),
+                    "Meat is not valid for the recipe"
+                );
+            }
             IRecipeData.RecipeInfo memory recipe = recipeDataInstance
                 .getRecipeData(recipeId);
             manufacturedProductDataInstance.createManufacturedProductData(
@@ -385,6 +394,39 @@ contract BC24 is
         return "ManufacturedProduct info changed.";
     }
 
+    function checkIfMeatCanBeUsedForRecipe(
+        uint256 recipeId,
+        uint256 meatId
+    ) public view returns (bool) {
+        IMeatData.MeatInfo memory meat = meatDataInstance.getMeatData(meatId);
+        ICarcassData.CarcassInfo memory carcass = carcassDataInstance
+            .getCarcassData(meat.carcassId);
+        IAnimalData.AnimalInfo memory animal = animalDataInstance.getAnimalData(
+            carcass.animalId
+        );
+        IRecipeData.RecipeInfo memory recipe = recipeDataInstance.getRecipeData(
+            recipeId
+        );
+
+        bool isPart = false;
+        for (uint256 i = 0; i < recipe.ingredientMeat.length; i++) {
+            if (
+                Utils.compareStrings(
+                    recipe.ingredientMeat[i].animalType,
+                    animal.animalType
+                ) &&
+                Utils.compareStrings(recipe.ingredientMeat[i].part, meat.part)
+            ) {
+                isPart = true;
+                break;
+            }
+        }
+        if (meat.isContaminated) {
+            isPart = false;
+        }
+        return isPart;
+    }
+
     /* Token Getter functions */
 
     function getAnimal(
@@ -465,7 +507,7 @@ contract BC24 is
         return tokenOwners[tokenId];
     }
 
-    function getTokensOfOwner() public view returns (uint256[] memory) {
+    /*  function getTokensOfOwner() public view returns (uint256[] memory) {
         uint256[] memory result = new uint256[](_nextTokenId);
         uint256 counter = 0;
         for (uint256 i = 0; i < _nextTokenId; i++) {
@@ -506,5 +548,5 @@ contract BC24 is
             finalResult[i] = result[i];
         }
         return finalResult;
-    }
+    } */
 }
