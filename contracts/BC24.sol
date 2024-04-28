@@ -15,6 +15,7 @@ import "./interfaces/IRecipeData.sol";
 import "./interfaces/IMeatData.sol";
 import "./interfaces/ITransportData.sol";
 import "./interfaces/IManufacturedProductData.sol";
+import "./interfaces/ITokenData.sol";
 
 import "./libraries/categoryTypes.sol";
 import "./libraries/roleAccess.sol";
@@ -28,16 +29,6 @@ contract BC24 is
     ERC1155BurnableUpgradeable,
     UUPSUpgradeable
 {
-    using CategoryTypes for string;
-    using RoleAccess for bytes32;
-
-    uint256 private _nextTokenId;
-    mapping(uint256 => address) private tokenOwners;
-
-    // Add this to your contract
-
-    mapping(uint256 => CategoryTypes.Types) public tokenCategoryTypes;
-
     //emits an event when a new token is created
     event NFTMinted(uint256 tokenId, address owner, string message);
 
@@ -50,6 +41,7 @@ contract BC24 is
     IMeatData private meatDataInstance;
     ITransportData private transportDataInstance;
     IManufacturedProductData private manufacturedProductDataInstance;
+    ITokenData private tokenDataInstance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -63,7 +55,8 @@ contract BC24 is
         address recipeDataAddress,
         address meatDataAddress,
         address transportDataAddress,
-        address manufacturedProductDataAdress
+        address manufacturedProductDataAdress,
+        address tokenDataAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -79,6 +72,7 @@ contract BC24 is
         manufacturedProductDataInstance = IManufacturedProductData(
             manufacturedProductDataAdress
         );
+        tokenDataInstance = ITokenData(tokenDataAddress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -124,7 +118,7 @@ contract BC24 is
 
     modifier onlyTokenOwner(uint256 tokenId) {
         require(
-            msg.sender == tokenOwners[tokenId],
+            msg.sender == tokenDataInstance.getOwnerOfToken(tokenId),
             "Caller does not own this token"
         );
         _;
@@ -132,7 +126,7 @@ contract BC24 is
     modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
-                msg.sender == tokenOwners[tokenIds[i]],
+                msg.sender == tokenDataInstance.getOwnerOfToken(tokenIds[i]),
                 "Caller does not own one of the tokens"
             );
         }
@@ -154,7 +148,7 @@ contract BC24 is
         uint256 weight,
         string memory gender
     ) public onlyBreederRole onlyMinterRole returns (uint256) {
-        uint256 tokenId = _nextTokenId;
+        uint256 tokenId = tokenDataInstance.getNextTokenId();
         animalDataInstance.createAnimalData(
             tokenId,
             animalType,
@@ -162,9 +156,12 @@ contract BC24 is
             weight
         );
         _mint(account, tokenId, 1, "");
-        tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Animal;
-        _nextTokenId++;
+        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
+        tokenDataInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.Animal
+        );
+        tokenDataInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "AnimalNFT created");
         return tokenId;
     }
@@ -174,12 +171,15 @@ contract BC24 is
     ) public onlySlaughterRole onlyTokenOwner(animalId) returns (uint256) {
         animalDataInstance.killAnimal(animalId);
 
-        uint256 tokenId = _nextTokenId;
+        uint256 tokenId = tokenDataInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         carcassDataInstance.createCarcassData(tokenId, animalId);
-        tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Carcass;
-        _nextTokenId++;
+        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
+        tokenDataInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.Carcass
+        );
+        tokenDataInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
         return tokenId;
     }
@@ -187,13 +187,17 @@ contract BC24 is
     function createMeat(
         uint256 carcassId
     ) public onlyManufacturerRole onlyTokenOwner(carcassId) returns (uint256) {
-        uint256 tokenId = _nextTokenId;
+        uint256 tokenId = tokenDataInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         uint256 weight = 99; //hardcoded value !!
         meatDataInstance.createMeatData(tokenId, carcassId, weight);
-        tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Meat;
-        _nextTokenId++;
+        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
+        tokenDataInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.Meat
+        );
+
+        tokenDataInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "MeatNFT created");
         return tokenId;
     }
@@ -205,7 +209,7 @@ contract BC24 is
         uint256 price,
         string memory description
     ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
-        uint256 tokenId = _nextTokenId;
+        uint256 tokenId = tokenDataInstance.getNextTokenId();
 
         if (recipeId == 0) {
             //create a new product
@@ -246,9 +250,12 @@ contract BC24 is
             );
         }
 
-        tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryTypes.Types.ManufacturedProduct;
-        _nextTokenId++;
+        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
+        tokenDataInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.ManufacturedProduct
+        );
+        tokenDataInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
         return tokenId;
     }
@@ -259,7 +266,7 @@ contract BC24 is
         string[] memory ingredientMeat,
         string[] memory ingredientPart
     ) public onlyManufacturerRole returns (uint256) {
-        uint256 tokenId = _nextTokenId;
+        uint256 tokenId = tokenDataInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         recipeDataInstance.createRecipeData(
             tokenId,
@@ -268,9 +275,12 @@ contract BC24 is
             ingredientMeat,
             ingredientPart
         );
-        tokenOwners[tokenId] = msg.sender;
-        tokenCategoryTypes[tokenId] = CategoryTypes.Types.Recipe;
-        _nextTokenId++;
+        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
+        tokenDataInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.Recipe
+        );
+        tokenDataInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "Recipe created");
         return tokenId;
     }
@@ -487,14 +497,9 @@ contract BC24 is
         address receiver
     ) public onlyTokenOwner(tokenId) {
         safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
-        tokenOwners[tokenId] = receiver;
+        tokenDataInstance.setOwnerOfToken(tokenId, receiver);
         // TODO: Handle transporter get token vs give token
         // transportDataInstance.createTransportData(tokenId);
-    }
-
-    /* Function to get the current amount of tokens around. Needed for testing */
-    function getTokenIndex() public view returns (uint256) {
-        return _nextTokenId;
     }
 
     /* Automatically created solidity functions */
@@ -513,50 +518,21 @@ contract BC24 is
         return super.supportsInterface(interfaceId);
     }
 
-    function ownerOf(uint256 tokenId) public view returns (address) {
-        return tokenOwners[tokenId];
+  /*   function ownerOf(uint256 tokenId) public view returns (address) {
+        return tokenDataInstance.getOwnerOfToken(tokenId);
     }
 
-    /*  function getTokensOfOwner() public view returns (uint256[] memory) {
-        uint256[] memory result = new uint256[](_nextTokenId);
-        uint256 counter = 0;
-        for (uint256 i = 0; i < _nextTokenId; i++) {
-            if (tokenOwners[i] == msg.sender) {
-                result[counter] = i;
-                counter++;
-            }
-        }
-        // resize the array
-        uint256[] memory finalResult = new uint256[](counter);
-        for (uint256 i = 0; i < counter; i++) {
-            finalResult[i] = result[i];
-        }
-        return finalResult;
-    }
+    function getTokensOfOwner() public view returns (uint256[] memory) {}
 
     function getTokenDataType(
         uint256 tokenId
     ) public view returns (CategoryTypes.Types) {
-        return tokenCategoryTypes[tokenId];
+        return tokenDataInstance.getTokenCategoryType(tokenId);
     }
 
     function getTokensByDataType(
         string memory _dataType
     ) public view returns (uint256[] memory) {
-        CategoryTypes.Types dataType = _dataType.stringToDataType();
-        uint256[] memory result = new uint256[](_nextTokenId);
-        uint256 counter = 0;
-        for (uint256 i = 0; i < _nextTokenId; i++) {
-            if (tokenCategoryTypes[i] == dataType) {
-                result[counter] = i;
-                counter++;
-            }
-        }
-        // resize the array
-        uint256[] memory finalResult = new uint256[](counter);
-        for (uint256 i = 0; i < counter; i++) {
-            finalResult[i] = result[i];
-        }
-        return finalResult;
+        return tokenDataInstance.getTokensOfCategoryType(_dataType);
     } */
 }
