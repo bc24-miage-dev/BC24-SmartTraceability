@@ -6,6 +6,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./interfaces/ITransportData.sol";
+import "./interfaces/IRoleAccess.sol";
+import "./interfaces/IOwnerAndCategoryMapper.sol";
+
+import "./libraries/categoryTypes.sol";
 
 contract TransportData is
     Initializable,
@@ -15,26 +19,93 @@ contract TransportData is
     UUPSUpgradeable,
     ITransportData
 {
+    IRoleAccess private roleAccessInstance;
+    IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
+
+    mapping(uint256 => TransportInfo) private _tokenTransportData;
+
+    modifier onlyTransporterRole() {
+        require(
+            roleAccessInstance.onlyTransporterRole(msg.sender),
+            "Caller is not a transporter"
+        );
+        _;
+    }
+
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(
+            ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId) ==
+                msg.sender,
+            "Caller is not the owner of the token"
+        );
+        _;
+    }
+
+    modifier onlyAnimalNFT(uint256 tokenId) {
+        require(
+            ownerAndCategoryMapperInstance.getTokenCategoryType(tokenId) ==
+                CategoryTypes.Types.Animal,
+            "Token is not an animal NFT"
+        );
+        _;
+    }
+
+    modifier onlyWhenAnimalPresent(uint256 tokenId) {
+        TransportInfo storage tokenInfo = _tokenTransportData[tokenId];
+        require(
+            ownerAndCategoryMapperInstance.getOwnerOfToken(
+                tokenInfo.animalId
+            ) == msg.sender,
+            "Animal is not present or is not owned by the transporter"
+        );
+        _;
+    }
+
+    //emits an event when a new token is created
+    event NFTMinted(uint256 tokenId, address owner, string message);
+
+    // emits an event when metadata is changed
+    event MetaDataChanged(uint256 tokenId, address owner, string message);
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin) public initializer {
+    function initialize(
+        address defaultAdmin,
+        address roleAccessContract,
+        address ownerAndCategoryMapperAddress
+    ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+
+        roleAccessInstance = IRoleAccess(roleAccessContract);
+        ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
+            ownerAndCategoryMapperAddress
+        );
     }
 
-    mapping(uint256 => TransportInfo) private _tokenTransportData;
+    function createTransportData(address receiver, uint animalId) external {
+        uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
+        _mint(receiver, tokenId, 1, "");
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
+        ownerAndCategoryMapperInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.Transport
+        );
+        ownerAndCategoryMapperInstance.setNextTokenId(tokenId + 1);
 
-    function createTransportData(uint256 tokenId) external {
         TransportInfo storage transport = _tokenTransportData[tokenId];
         transport.timingInfo.creationDate = block.timestamp;
         transport.category = "Transport";
+        transport.animalId = animalId;
+
+        emit NFTMinted(tokenId, receiver, "TransportNFT created");
     }
 
     function setTransportData(
@@ -43,19 +114,39 @@ contract TransportData is
         uint256 temperature,
         uint256 humidity,
         bool isContaminated
-    ) external {
+    )
+        external
+        onlyTokenOwner(tokenId)
+        onlyTransporterRole
+        onlyWhenAnimalPresent(tokenId)
+    {
         TransportInfo storage transport = _tokenTransportData[tokenId];
         transport.duration = duration;
         transport.temperature = temperature;
         transport.humidity = humidity;
         transport.isContaminated = isContaminated;
         transport.timingInfo.lastUpdateDate = block.timestamp;
+
+        emit MetaDataChanged(tokenId, msg.sender, "Transport data updated");
     }
 
     function getTransportData(
         uint256 tokenId
     ) external view virtual returns (TransportInfo memory) {
         return _tokenTransportData[tokenId];
+    }
+
+    function transferAnimal(
+        uint256 tokenId,
+        address receiver
+    )
+        external
+        onlyTokenOwner(tokenId)
+        onlyAnimalNFT(tokenId)
+        onlyTransporterRole
+    {
+        safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
     }
 
     function supportsInterface(

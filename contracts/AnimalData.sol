@@ -11,6 +11,7 @@ import "./libraries/categoryTypes.sol";
 import "./interfaces/IAnimalData.sol";
 import "./interfaces/IRoleAccess.sol";
 import "./interfaces/IOwnerAndCategoryMapper.sol";
+import "./interfaces/ITransportData.sol";
 
 contract AnimalData is
     Initializable,
@@ -22,6 +23,8 @@ contract AnimalData is
 {
     IRoleAccess private roleAccessInstance;
     IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
+
+    ITransportData private transportDataInstance;
 
     modifier onlyBreederRole() {
         require(
@@ -62,7 +65,8 @@ contract AnimalData is
     function initialize(
         address defaultAdmin,
         address roleAccessContract,
-        address ownerAndCategoryMapperAddress
+        address ownerAndCategoryMapperAddress,
+        address transportDataAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -74,6 +78,7 @@ contract AnimalData is
         ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
             ownerAndCategoryMapperAddress
         );
+        transportDataInstance = ITransportData(transportDataAddress);
     }
 
     mapping(uint256 => IAnimalData.AnimalInfo) private _tokenAnimalData;
@@ -113,7 +118,7 @@ contract AnimalData is
         string[] memory vaccinationList,
         string[] memory foodList,
         bool isContaminated
-    ) external override onlyTokenOwner(tokenId) {
+    ) external override onlyTokenOwner(tokenId) onlyBreederRole {
         AnimalInfo storage animal = _tokenAnimalData[tokenId];
         animal.placeOfOrigin = placeOfOrigin;
         animal.dateOfBirth = dateOfBirth;
@@ -181,14 +186,21 @@ contract AnimalData is
         animal.isLifeCycleOver = true;
     }
 
-    function transferAnimal(
+    function transferAnimalToTransporter(
         uint256 tokenId,
         address receiver
     ) external onlyTokenOwner(tokenId) {
         safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
         ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
-        // TODO: Handle transporter get token vs give token
-        // transportDataInstance.createTransportData(tokenId);
+        transportDataInstance.createTransportData(receiver, tokenId);
+    }
+
+    function transferAnimalToSlaugtherer(
+        uint256 tokenId,
+        address receiver
+    ) external onlyTokenOwner(tokenId) {
+        safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
     }
 
     function supportsInterface(

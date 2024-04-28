@@ -13,6 +13,7 @@ describe("BC24-Breeder", function () {
   let bc24: any;
   let animalContract: any;
   let roleAccessContract: any;
+  let ownerAndCategoryMapperContract: any;
 
   let setupService: any;
 
@@ -31,6 +32,8 @@ describe("BC24-Breeder", function () {
     bc24 = setupService.bc24;
     animalContract = setupService.animalContract;
     roleAccessContract = setupService.roleAccessContract;
+    ownerAndCategoryMapperContract = setupService.ownerAndCategoryMapperContract;
+    
   });
 
   it("Test contract", async function () {
@@ -146,14 +149,14 @@ describe("BC24-Breeder", function () {
 
     await animalContract
       .connect(breeder)
-      .transferAnimal(0, transporter.address);
+      .transferAnimalToTransporter(0, transporter.address);
 
     await expect(
-      bc24.connect(breeder).getTokensOfOwner()
+      ownerAndCategoryMapperContract.connect(breeder).getTokensOfOwner(breeder.address)
     ).to.eventually.have.lengthOf(0);
 
     await expect(
-      bc24.connect(transporter).getTokensOfOwner()
-    ).to.eventually.have.lengthOf(1);
+      ownerAndCategoryMapperContract.connect(transporter).getTokensOfOwner(transporter.address)
+    ).to.eventually.have.lengthOf(2);
   });
 });

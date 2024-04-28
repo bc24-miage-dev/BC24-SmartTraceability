@@ -60,5 +60,13 @@ interface IAnimalData {
 
     function killAnimal(uint256 animalId) external;
 
-    function transferAnimal(uint256 tokenId, address receiver) external;
+    function transferAnimalToTransporter(
+        uint256 tokenId,
+        address receiver
+    ) external;
+
+    function transferAnimalToSlaugtherer(
+        uint256 tokenId,
+        address receiver
+    ) external;
 }

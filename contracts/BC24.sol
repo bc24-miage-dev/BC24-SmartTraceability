@@ -76,7 +76,9 @@ contract BC24 is
             manufacturedProductDataAdress
         );
         roleAccessInstance = IRoleAccess(roleAccessAddress);
-        ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(ownerAndCategoryMapperAddress);
+        ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
+            ownerAndCategoryMapperAddress
+        );
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -123,7 +125,8 @@ contract BC24 is
 
     modifier onlyTokenOwner(uint256 tokenId) {
         require(
-            msg.sender == ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId),
+            msg.sender ==
+                ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId),
             "Caller does not own this token"
         );
         _;
@@ -131,7 +134,8 @@ contract BC24 is
     modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
-                msg.sender == ownerAndCategoryMapperInstance.getOwnerOfToken(tokenIds[i]),
+                msg.sender ==
+                    ownerAndCategoryMapperInstance.getOwnerOfToken(tokenIds[i]),
                 "Caller does not own one of the tokens"
             );
         }
@@ -146,30 +150,6 @@ contract BC24 is
     }
 
     /* Token Creation functions */
-
-    /* function createAnimal(
-        address account,
-        string memory animalType,
-        uint256 weight,
-        string memory gender
-    ) public onlyBreederRole onlyMinterRole returns (uint256) {
-        uint256 tokenId = tokenDataInstance.getNextTokenId();
-        animalDataInstance.createAnimalData(
-            tokenId,
-            animalType,
-            gender,
-            weight
-        );
-        _mint(account, tokenId, 1, "");
-        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
-        tokenDataInstance.setTokenCategoryType(
-            tokenId,
-            CategoryTypes.Types.Animal
-        );
-        tokenDataInstance.setNextTokenId(tokenId + 1);
-        emit NFTMinted(tokenId, msg.sender, "AnimalNFT created");
-        return tokenId;
-    } */
 
     function slaughterAnimal(
         uint256 animalId
@@ -188,7 +168,8 @@ contract BC24 is
         emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
         return tokenId;
     }
-/* 
+
+    /* 
     function createMeat(
         uint256 carcassId
     ) public onlyManufacturerRole onlyTokenOwner(carcassId) returns (uint256) {
@@ -320,28 +301,7 @@ contract BC24 is
         return "Breeding info changed.";
     } */
 
-   /*  function updateTransport(
-        uint256 tokenId,
-        uint256 duration,
-        uint256 temperature,
-        uint256 humidity,
-        bool isContaminated
-    )
-        public
-        onlyTransporterRole
-        onlyTokenOwner(tokenId)
-        returns (string memory)
-    {
-        transportDataInstance.setTransportData(
-            tokenId,
-            duration,
-            temperature,
-            humidity,
-            isContaminated
-        );
-        emit MetaDataChanged(tokenId, msg.sender, "Transport info changed.");
-        return "Transport info changed.";
-    }
+    /*  
 
     function updateCarcass(
         uint256 tokenId,
@@ -454,23 +414,6 @@ contract BC24 is
 
     /* Token Getter functions */
 
-    function getAnimal(
-        uint256 tokenId
-    ) public view returns (IAnimalData.AnimalInfo memory) {
-        return animalDataInstance.getAnimalData(tokenId);
-    }
-
-    function getCarcass(
-        uint256 tokenId
-    ) public view returns (ICarcassData.CarcassInfo memory) {
-        return carcassDataInstance.getCarcassData(tokenId);
-    }
-
-    function getTransport(
-        uint256 tokenId
-    ) public view returns (ITransportData.TransportInfo memory) {
-        return transportDataInstance.getTransportData(tokenId);
-    }
 
     function getMeat(
         uint256 tokenId

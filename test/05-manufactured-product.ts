@@ -93,8 +93,6 @@ describe("BC24-Manufactured-Product", function () {
 
     const receipt2 = await transaction2.wait();
 
-    meatId2 = receipt2.logs[1].args[0];
-
     await contract
       .connect(manufacturer)
       .updateMeat(

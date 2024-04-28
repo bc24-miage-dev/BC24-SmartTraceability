@@ -63,12 +63,21 @@ export class SetupService {
     ]);
     await this.roleAccessContract.waitForDeployment();
 
+    const TransportData = await ethers.getContractFactory("TransportData");
+    this.transportContract = await upgrades.deployProxy(TransportData, [
+      this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
+    ]);
+    await this.transportContract.waitForDeployment();
+
     /* Add interfaces here like below */
     const AnimalContract = await ethers.getContractFactory("AnimalData");
     this.animalContract = await upgrades.deployProxy(AnimalContract, [
       this.defaultAdmin.address,
       await this.roleAccessContract.getAddress(),
       await this.ownerAndCategoryMapperContract.getAddress(),
+      await this.transportContract.getAddress(),
     ]);
 
     await this.animalContract.waitForDeployment();
@@ -79,14 +88,9 @@ export class SetupService {
       await this.roleAccessContract.getAddress(),
       await this.animalContract.getAddress(),
       await this.ownerAndCategoryMapperContract.getAddress(),
+      /*   await this.transportContract.getAddress(), */
     ]);
     await this.carcassContract.waitForDeployment();
-
-    const TransportData = await ethers.getContractFactory("TransportData");
-    this.transportContract = await upgrades.deployProxy(TransportData, [
-      this.defaultAdmin.address,
-    ]);
-    await this.transportContract.waitForDeployment();
 
     // Déploiement du contrat MeatData
     const MeatData = await ethers.getContractFactory("MeatData");
