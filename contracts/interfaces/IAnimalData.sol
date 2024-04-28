@@ -37,10 +37,9 @@ interface IAnimalData {
     }
 
     function createAnimalData(
-        uint256 tokenId,
         string memory animalType,
-        string memory gender,
-        uint256 weight
+        uint256 weight,
+        string memory gender
     ) external;
 
     function getAnimalData(
@@ -61,5 +60,5 @@ interface IAnimalData {
 
     function killAnimal(uint256 animalId) external;
 
-    function test() external pure returns (string memory);
+    function transferAnimal(uint256 tokenId, address receiver) external;
 }

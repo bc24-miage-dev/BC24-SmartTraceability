@@ -15,19 +15,19 @@ import "./interfaces/IRecipeData.sol";
 import "./interfaces/IMeatData.sol";
 import "./interfaces/ITransportData.sol";
 import "./interfaces/IManufacturedProductData.sol";
-import "./interfaces/ITokenData.sol";
+import "./interfaces/IRoleAccess.sol";
 
 import "./libraries/categoryTypes.sol";
-import "./libraries/roleAccess.sol";
+import "./libraries/RoleAccessUtils.sol";
 import "./libraries/utils.sol";
 
 /// @custom:security-contact Hugo.albert.marques@gmail.com
 contract BC24 is
     Initializable,
     ERC1155Upgradeable,
-    AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    AccessControlUpgradeable
 {
     //emits an event when a new token is created
     event NFTMinted(uint256 tokenId, address owner, string message);
@@ -41,7 +41,7 @@ contract BC24 is
     IMeatData private meatDataInstance;
     ITransportData private transportDataInstance;
     IManufacturedProductData private manufacturedProductDataInstance;
-    ITokenData private tokenDataInstance;
+    IRoleAccess private roleAccessInstance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -56,7 +56,7 @@ contract BC24 is
         address meatDataAddress,
         address transportDataAddress,
         address manufacturedProductDataAdress,
-        address tokenDataAddress
+        address roleAccessAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -72,13 +72,14 @@ contract BC24 is
         manufacturedProductDataInstance = IManufacturedProductData(
             manufacturedProductDataAdress
         );
-        tokenDataInstance = ITokenData(tokenDataAddress);
+        roleAccessInstance = IRoleAccess(roleAccessAddress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
+
     modifier onlyBreederRole() {
         require(
-            hasRole(RoleAccess.BREEDER_ROLE, msg.sender),
+            hasRole(RoleAccessUtils.BREEDER_ROLE, msg.sender),
             "Caller is not a breeder"
         );
         _;
@@ -86,7 +87,7 @@ contract BC24 is
 
     modifier onlyTransporterRole() {
         require(
-            hasRole(RoleAccess.TRANSPORTER_ROLE, msg.sender),
+            hasRole(RoleAccessUtils.TRANSPORTER_ROLE, msg.sender),
             "Caller is not a transporter"
         );
         _;
@@ -94,7 +95,7 @@ contract BC24 is
 
     modifier onlySlaughterRole() {
         require(
-            hasRole(RoleAccess.SLAUGHTER_ROLE, msg.sender),
+            hasRole(RoleAccessUtils.SLAUGHTER_ROLE, msg.sender),
             "Caller is not a slaughterer"
         );
         _;
@@ -102,7 +103,7 @@ contract BC24 is
 
     modifier onlyManufacturerRole() {
         require(
-            hasRole(RoleAccess.MANUFACTURERE_ROLE, msg.sender),
+            hasRole(RoleAccessUtils.MANUFACTURERE_ROLE, msg.sender),
             "Caller is not a slaughterer"
         );
         _;
@@ -110,7 +111,7 @@ contract BC24 is
 
     modifier onlyMinterRole() {
         require(
-            hasRole(RoleAccess.MINTER_ROLE, msg.sender),
+            hasRole(RoleAccessUtils.MINTER_ROLE, msg.sender),
             "Caller is not a minter"
         );
         _;
@@ -118,7 +119,7 @@ contract BC24 is
 
     modifier onlyTokenOwner(uint256 tokenId) {
         require(
-            msg.sender == tokenDataInstance.getOwnerOfToken(tokenId),
+            msg.sender == roleAccessInstance.getOwnerOfToken(tokenId),
             "Caller does not own this token"
         );
         _;
@@ -126,7 +127,7 @@ contract BC24 is
     modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
-                msg.sender == tokenDataInstance.getOwnerOfToken(tokenIds[i]),
+                msg.sender == roleAccessInstance.getOwnerOfToken(tokenIds[i]),
                 "Caller does not own one of the tokens"
             );
         }
@@ -137,12 +138,12 @@ contract BC24 is
         address account,
         string memory role
     ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        grantRole(RoleAccess.getRoleFromString(role), account);
+        roleAccessInstance.grantRoleToAddress(account, role);
     }
 
     /* Token Creation functions */
 
-    function createAnimal(
+    /* function createAnimal(
         address account,
         string memory animalType,
         uint256 weight,
@@ -164,22 +165,22 @@ contract BC24 is
         tokenDataInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "AnimalNFT created");
         return tokenId;
-    }
+    } */
 
     function slaughterAnimal(
         uint256 animalId
     ) public onlySlaughterRole onlyTokenOwner(animalId) returns (uint256) {
         animalDataInstance.killAnimal(animalId);
 
-        uint256 tokenId = tokenDataInstance.getNextTokenId();
+        uint256 tokenId = roleAccessInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
-        carcassDataInstance.createCarcassData(tokenId, animalId);
-        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
-        tokenDataInstance.setTokenCategoryType(
+        //carcassDataInstance.createCarcassData(tokenId, animalId);
+        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
+        roleAccessInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.Carcass
         );
-        tokenDataInstance.setNextTokenId(tokenId + 1);
+        roleAccessInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
         return tokenId;
     }
@@ -187,17 +188,17 @@ contract BC24 is
     function createMeat(
         uint256 carcassId
     ) public onlyManufacturerRole onlyTokenOwner(carcassId) returns (uint256) {
-        uint256 tokenId = tokenDataInstance.getNextTokenId();
+        uint256 tokenId = roleAccessInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         uint256 weight = 99; //hardcoded value !!
         meatDataInstance.createMeatData(tokenId, carcassId, weight);
-        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
-        tokenDataInstance.setTokenCategoryType(
+        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
+        roleAccessInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.Meat
         );
 
-        tokenDataInstance.setNextTokenId(tokenId + 1);
+        roleAccessInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "MeatNFT created");
         return tokenId;
     }
@@ -209,7 +210,7 @@ contract BC24 is
         uint256 price,
         string memory description
     ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
-        uint256 tokenId = tokenDataInstance.getNextTokenId();
+        uint256 tokenId = roleAccessInstance.getNextTokenId();
 
         if (recipeId == 0) {
             //create a new product
@@ -250,12 +251,12 @@ contract BC24 is
             );
         }
 
-        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
-        tokenDataInstance.setTokenCategoryType(
+        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
+        roleAccessInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.ManufacturedProduct
         );
-        tokenDataInstance.setNextTokenId(tokenId + 1);
+        roleAccessInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
         return tokenId;
     }
@@ -266,7 +267,7 @@ contract BC24 is
         string[] memory ingredientMeat,
         string[] memory ingredientPart
     ) public onlyManufacturerRole returns (uint256) {
-        uint256 tokenId = tokenDataInstance.getNextTokenId();
+        uint256 tokenId = roleAccessInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         recipeDataInstance.createRecipeData(
             tokenId,
@@ -275,19 +276,19 @@ contract BC24 is
             ingredientMeat,
             ingredientPart
         );
-        tokenDataInstance.setOwnerOfToken(tokenId, msg.sender);
-        tokenDataInstance.setTokenCategoryType(
+        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
+        roleAccessInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.Recipe
         );
-        tokenDataInstance.setNextTokenId(tokenId + 1);
+        roleAccessInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "Recipe created");
         return tokenId;
     }
 
     /* Token Update functions */
 
-    function updateAnimal(
+    /* function updateAnimal(
         uint256 tokenId,
         string memory placeOfOrigin,
         uint256 dateOfBirth,
@@ -313,7 +314,7 @@ contract BC24 is
         emit MetaDataChanged(tokenId, msg.sender, "Breeding info changed.");
 
         return "Breeding info changed.";
-    }
+    } */
 
     function updateTransport(
         uint256 tokenId,
@@ -497,7 +498,7 @@ contract BC24 is
         address receiver
     ) public onlyTokenOwner(tokenId) {
         safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
-        tokenDataInstance.setOwnerOfToken(tokenId, receiver);
+        roleAccessInstance.setOwnerOfToken(tokenId, receiver);
         // TODO: Handle transporter get token vs give token
         // transportDataInstance.createTransportData(tokenId);
     }
@@ -505,7 +506,7 @@ contract BC24 is
     /* Automatically created solidity functions */
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyRole(RoleAccess.UPGRADER_ROLE) {}
+    ) internal override onlyRole(RoleAccessUtils.UPGRADER_ROLE) {}
 
     function supportsInterface(
         bytes4 interfaceId
@@ -518,11 +519,15 @@ contract BC24 is
         return super.supportsInterface(interfaceId);
     }
 
-  /*   function ownerOf(uint256 tokenId) public view returns (address) {
+    function getTokensOfOwner() public view returns (uint256[] memory) {
+        return roleAccessInstance.getTokensOfOwner(msg.sender);
+    }
+
+    /*   function ownerOf(uint256 tokenId) public view returns (address) {
         return tokenDataInstance.getOwnerOfToken(tokenId);
     }
 
-    function getTokensOfOwner() public view returns (uint256[] memory) {}
+    
 
     function getTokenDataType(
         uint256 tokenId

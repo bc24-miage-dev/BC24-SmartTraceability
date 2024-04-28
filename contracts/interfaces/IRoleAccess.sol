@@ -2,7 +2,7 @@ pragma solidity ^0.8.20;
 
 import "../libraries/categoryTypes.sol";
 
-interface ITokenData {
+interface IRoleAccess {
     function setNextTokenId(uint256 count) external;
 
     function getNextTokenId() external view returns (uint256);
@@ -27,4 +27,8 @@ interface ITokenData {
     function getTokensOfCategoryType(
         string memory categoryType
     ) external view returns (uint256[] memory);
+
+    function onlyBreederRole(address sender) external view returns (bool);
+
+    function grantRoleToAddress(address account, string memory role) external;
 }
