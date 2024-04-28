@@ -10,6 +10,7 @@ import "./libraries/categoryTypes.sol";
 
 import "./interfaces/IAnimalData.sol";
 import "./interfaces/IRoleAccess.sol";
+import "./interfaces/IOwnerAndCategoryMapper.sol";
 
 contract AnimalData is
     Initializable,
@@ -20,6 +21,7 @@ contract AnimalData is
     IAnimalData
 {
     IRoleAccess private roleAccessInstance;
+    IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
 
     modifier onlyBreederRole() {
         require(
@@ -39,7 +41,8 @@ contract AnimalData is
 
     modifier onlyTokenOwner(uint256 tokenId) {
         require(
-            roleAccessInstance.getOwnerOfToken(tokenId) == msg.sender,
+            ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId) ==
+                msg.sender,
             "Caller is not the owner of the token"
         );
         _;
@@ -58,7 +61,8 @@ contract AnimalData is
 
     function initialize(
         address defaultAdmin,
-        address roleAccessContract
+        address roleAccessContract,
+        address ownerAndCategoryMapperAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -67,6 +71,9 @@ contract AnimalData is
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
 
         roleAccessInstance = IRoleAccess(roleAccessContract);
+        ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
+            ownerAndCategoryMapperAddress
+        );
     }
 
     mapping(uint256 => IAnimalData.AnimalInfo) private _tokenAnimalData;
@@ -76,14 +83,14 @@ contract AnimalData is
         uint256 weight,
         string memory gender
     ) external override onlyBreederRole {
-        uint256 tokenId = roleAccessInstance.getNextTokenId();
+        uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
-        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
-        roleAccessInstance.setTokenCategoryType(
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);
+        ownerAndCategoryMapperInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.Animal
         );
-        roleAccessInstance.setNextTokenId(tokenId + 1);
+        ownerAndCategoryMapperInstance.setNextTokenId(tokenId + 1);
 
         AnimalInfo storage animalInfo = _tokenAnimalData[tokenId];
         animalInfo.timingInfo.creationDate = block.timestamp;
@@ -179,7 +186,7 @@ contract AnimalData is
         address receiver
     ) external onlyTokenOwner(tokenId) {
         safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
-        roleAccessInstance.setOwnerOfToken(tokenId, receiver);
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
         // TODO: Handle transporter get token vs give token
         // transportDataInstance.createTransportData(tokenId);
     }

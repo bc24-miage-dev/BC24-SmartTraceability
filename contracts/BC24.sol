@@ -16,6 +16,7 @@ import "./interfaces/IMeatData.sol";
 import "./interfaces/ITransportData.sol";
 import "./interfaces/IManufacturedProductData.sol";
 import "./interfaces/IRoleAccess.sol";
+import "./interfaces/IOwnerAndCategoryMapper.sol";
 
 import "./libraries/categoryTypes.sol";
 import "./libraries/RoleAccessUtils.sol";
@@ -42,6 +43,7 @@ contract BC24 is
     ITransportData private transportDataInstance;
     IManufacturedProductData private manufacturedProductDataInstance;
     IRoleAccess private roleAccessInstance;
+    IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -56,7 +58,8 @@ contract BC24 is
         address meatDataAddress,
         address transportDataAddress,
         address manufacturedProductDataAdress,
-        address roleAccessAddress
+        address roleAccessAddress,
+        address ownerAndCategoryMapperAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -73,6 +76,7 @@ contract BC24 is
             manufacturedProductDataAdress
         );
         roleAccessInstance = IRoleAccess(roleAccessAddress);
+        ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(ownerAndCategoryMapperAddress);
     }
 
     /* Not directly needed at the moment since we need to define it.  */
@@ -119,7 +123,7 @@ contract BC24 is
 
     modifier onlyTokenOwner(uint256 tokenId) {
         require(
-            msg.sender == roleAccessInstance.getOwnerOfToken(tokenId),
+            msg.sender == ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId),
             "Caller does not own this token"
         );
         _;
@@ -127,7 +131,7 @@ contract BC24 is
     modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
-                msg.sender == roleAccessInstance.getOwnerOfToken(tokenIds[i]),
+                msg.sender == ownerAndCategoryMapperInstance.getOwnerOfToken(tokenIds[i]),
                 "Caller does not own one of the tokens"
             );
         }
@@ -172,23 +176,23 @@ contract BC24 is
     ) public onlySlaughterRole onlyTokenOwner(animalId) returns (uint256) {
         animalDataInstance.killAnimal(animalId);
 
-        uint256 tokenId = roleAccessInstance.getNextTokenId();
+        uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         //carcassDataInstance.createCarcassData(tokenId, animalId);
-        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
-        roleAccessInstance.setTokenCategoryType(
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);
+        ownerAndCategoryMapperInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.Carcass
         );
-        roleAccessInstance.setNextTokenId(tokenId + 1);
+        ownerAndCategoryMapperInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
         return tokenId;
     }
-
+/* 
     function createMeat(
         uint256 carcassId
     ) public onlyManufacturerRole onlyTokenOwner(carcassId) returns (uint256) {
-        uint256 tokenId = roleAccessInstance.getNextTokenId();
+        uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         uint256 weight = 99; //hardcoded value !!
         meatDataInstance.createMeatData(tokenId, carcassId, weight);
@@ -284,7 +288,7 @@ contract BC24 is
         roleAccessInstance.setNextTokenId(tokenId + 1);
         emit NFTMinted(tokenId, msg.sender, "Recipe created");
         return tokenId;
-    }
+    } */
 
     /* Token Update functions */
 
@@ -316,7 +320,7 @@ contract BC24 is
         return "Breeding info changed.";
     } */
 
-    function updateTransport(
+   /*  function updateTransport(
         uint256 tokenId,
         uint256 duration,
         uint256 temperature,
@@ -446,7 +450,7 @@ contract BC24 is
             isPart = false;
         }
         return isPart;
-    }
+    } */
 
     /* Token Getter functions */
 
@@ -498,7 +502,7 @@ contract BC24 is
         address receiver
     ) public onlyTokenOwner(tokenId) {
         safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
-        roleAccessInstance.setOwnerOfToken(tokenId, receiver);
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
         // TODO: Handle transporter get token vs give token
         // transportDataInstance.createTransportData(tokenId);
     }
@@ -520,7 +524,7 @@ contract BC24 is
     }
 
     function getTokensOfOwner() public view returns (uint256[] memory) {
-        return roleAccessInstance.getTokensOfOwner(msg.sender);
+        return ownerAndCategoryMapperInstance.getTokensOfOwner(msg.sender);
     }
 
     /*   function ownerOf(uint256 tokenId) public view returns (address) {

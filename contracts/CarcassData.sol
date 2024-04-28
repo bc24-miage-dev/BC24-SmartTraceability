@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/ICarcassData.sol";
 import "./interfaces/IRoleAccess.sol";
 import "./interfaces/IAnimalData.sol";
+import "./interfaces/IOwnerAndCategoryMapper.sol";
 
 contract CarcassData is
     Initializable,
@@ -20,6 +21,7 @@ contract CarcassData is
 {
     IRoleAccess private roleAccessInstance;
     IAnimalData private animalDataInstance;
+    IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
 
     //emits an event when a new token is created
     event NFTMinted(uint256 tokenId, address owner, string message);
@@ -32,7 +34,8 @@ contract CarcassData is
     function initialize(
         address defaultAdmin,
         address roleAccessAddress,
-        address animalDataAddress
+        address animalDataAddress,
+        address ownerAndCategoryMapperAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -42,19 +45,22 @@ contract CarcassData is
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         roleAccessInstance = IRoleAccess(roleAccessAddress);
         animalDataInstance = IAnimalData(animalDataAddress);
+        ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
+            ownerAndCategoryMapperAddress
+        );
     }
 
     mapping(uint256 => ICarcassData.CarcassInfo) private _tokenCarcassData;
 
     function createCarcassData(uint256 animalId) external {
-        uint256 tokenId = roleAccessInstance.getNextTokenId();
+        uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
-        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
-        roleAccessInstance.setTokenCategoryType(
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);
+        ownerAndCategoryMapperInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.Carcass
         );
-        roleAccessInstance.setNextTokenId(tokenId + 1);
+        ownerAndCategoryMapperInstance.setNextTokenId(tokenId + 1);
 
         CarcassInfo storage carcass = _tokenCarcassData[tokenId];
         carcass.timingInfo.creationDate = block.timestamp;

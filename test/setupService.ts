@@ -16,6 +16,7 @@ export class SetupService {
   meatContract: any;
   recipeContract: any;
   manufacturedProductContract: any;
+  ownerAndCategoryMapperContract: any;
 
   constructor() {
     this.defaultAdmin = {};
@@ -32,6 +33,7 @@ export class SetupService {
     this.meatContract = {};
     this.recipeContract = {};
     this.roleAccessContract = {};
+    this.ownerAndCategoryMapperContract = {};
   }
 
   async setup() {
@@ -46,6 +48,15 @@ export class SetupService {
 
     /* Add interfaces here like below */
 
+    const OwnerAndCategoryMapper = await ethers.getContractFactory(
+      "OwnerAndCategoryMapper"
+    );
+    this.ownerAndCategoryMapperContract = await upgrades.deployProxy(
+      OwnerAndCategoryMapper,
+      [this.defaultAdmin.address]
+    );
+    await this.ownerAndCategoryMapperContract.waitForDeployment();
+
     const RoleAccess = await ethers.getContractFactory("RoleAccess");
     this.roleAccessContract = await upgrades.deployProxy(RoleAccess, [
       this.defaultAdmin.address,
@@ -57,6 +68,7 @@ export class SetupService {
     this.animalContract = await upgrades.deployProxy(AnimalContract, [
       this.defaultAdmin.address,
       await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
 
     await this.animalContract.waitForDeployment();
@@ -66,6 +78,7 @@ export class SetupService {
       this.defaultAdmin.address,
       await this.roleAccessContract.getAddress(),
       await this.animalContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
     await this.carcassContract.waitForDeployment();
 
@@ -108,6 +121,7 @@ export class SetupService {
       await this.transportContract.getAddress(),
       await this.manufacturedProductContract.getAddress(),
       await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
 
     await this.bc24.waitForDeployment();
