@@ -11,6 +11,7 @@ library RoleAccess {
     bytes32 public constant SLAUGHTER_ROLE = keccak256("SLAUGHTER_ROLE");
     bytes32 public constant MANUFACTURERE_ROLE =
         keccak256("MANUFACTURERE_ROLE");
+    bytes32 public constant SELLER_ROLE = keccak256("SELLER_ROLE");
 
     // other roles
     bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
