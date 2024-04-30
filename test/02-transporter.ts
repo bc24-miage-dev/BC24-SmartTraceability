@@ -38,10 +38,6 @@ describe("BC24-Transporter", function () {
     ownerAndCategoryMapperContract =
       setupService.ownerAndCategoryMapperContract;
 
-    transportContract.on("NFTMinted", (tokenId: any, owner: any) => {
-      transportId = tokenId;
-    });
-
     const animalCreation = await animalContract
       .connect(breeder)
       .createAnimalData("Cow", 10, "male");
@@ -51,7 +47,7 @@ describe("BC24-Transporter", function () {
 
     await animalContract
       .connect(breeder)
-      .transferAnimalToTransporter(animalId, transporter.address);
+      .transferAnimal(animalId, transporter.address);
   });
 
   it("Test contract", async function () {
@@ -69,9 +65,12 @@ describe("BC24-Transporter", function () {
     const humidity = 50;
     const isContaminated = false;
 
-    const tokenOfTransporter = await ownerAndCategoryMapperContract
+    const transportCreation = await transportContract
       .connect(transporter)
-      .getTokensOfOwner(transporter.address);
+      .createTransportData(animalId);
+
+    const transportCreationReceipt = await transportCreation.wait();
+    transportId = transportCreationReceipt.logs[1].args[0];
 
     await expect(
       await transportContract
@@ -134,7 +133,7 @@ describe("BC24-Transporter", function () {
 
     await animalContract
       .connect(transporter)
-      .transferAnimalToSlaugtherer(animalId, slaughterer.address);
+      .transferAnimal(animalId, slaughterer.address);
     expect(
       await ownerAndCategoryMapperContract
         .connect(slaughterer)
@@ -143,17 +142,31 @@ describe("BC24-Transporter", function () {
   });
 
   it("should not allow to transfer Transport NFTs", async function () {
+    const transportCreation = await transportContract
+      .connect(transporter)
+      .createTransportData(animalId);
+
+    const transportCreationReceipt = await transportCreation.wait();
+    transportId = transportCreationReceipt.logs[1].args[0];
+
     await expect(
-      transportContract
+      animalContract
         .connect(transporter)
         .transferAnimal(transportId, slaughterer.address)
     ).to.be.revertedWith("Token is not an animal NFT");
   });
 
   it("should not allow transporter to change transport when it has been given away", async function () {
+    const transportCreation = await transportContract
+      .connect(transporter)
+      .createTransportData(animalId);
+
+    const transportCreationReceipt = await transportCreation.wait();
+    transportId = transportCreationReceipt.logs[1].args[0];
+
     await animalContract
       .connect(transporter)
-      .transferAnimalToSlaugtherer(animalId, slaughterer.address);
+      .transferAnimal(animalId, slaughterer.address);
 
     const duration = 1000;
     const temperature = 25;

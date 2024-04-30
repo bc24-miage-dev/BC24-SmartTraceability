@@ -76,8 +76,7 @@ export class SetupService {
     this.animalContract = await upgrades.deployProxy(AnimalContract, [
       this.defaultAdmin.address,
       await this.roleAccessContract.getAddress(),
-      await this.ownerAndCategoryMapperContract.getAddress(),
-      await this.transportContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress()
     ]);
 
     await this.animalContract.waitForDeployment();

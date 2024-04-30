@@ -15,7 +15,7 @@ interface ITransportData {
         bool isContaminated;
     }
 
-    function createTransportData(address receiver, uint256 animalId) external;
+    function createTransportData(uint256 animalId) external;
 
     function setTransportData(
         uint256 tokenId,

@@ -41,15 +41,6 @@ contract TransportData is
         _;
     }
 
-    modifier onlyAnimalNFT(uint256 tokenId) {
-        require(
-            ownerAndCategoryMapperInstance.getTokenCategoryType(tokenId) ==
-                CategoryTypes.Types.Animal,
-            "Token is not an animal NFT"
-        );
-        _;
-    }
-
     modifier onlyWhenAnimalPresent(uint256 tokenId) {
         TransportInfo storage tokenInfo = _tokenTransportData[tokenId];
         require(
@@ -90,10 +81,12 @@ contract TransportData is
         );
     }
 
-    function createTransportData(address receiver, uint animalId) external {
+    function createTransportData(
+        uint animalId
+    ) external onlyTokenOwner(animalId) onlyTransporterRole {
         uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
-        _mint(receiver, tokenId, 1, "");
-        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
+        _mint(msg.sender, tokenId, 1, "");
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);
         ownerAndCategoryMapperInstance.setTokenCategoryType(
             tokenId,
             CategoryTypes.Types.Transport
@@ -105,7 +98,7 @@ contract TransportData is
         transport.category = "Transport";
         transport.animalId = animalId;
 
-        emit NFTMinted(tokenId, receiver, "TransportNFT created");
+        emit NFTMinted(tokenId, msg.sender, "TransportNFT created");
     }
 
     function setTransportData(
@@ -134,19 +127,6 @@ contract TransportData is
         uint256 tokenId
     ) external view virtual returns (TransportInfo memory) {
         return _tokenTransportData[tokenId];
-    }
-
-    function transferAnimal(
-        uint256 tokenId,
-        address receiver
-    )
-        external
-        onlyTokenOwner(tokenId)
-        onlyAnimalNFT(tokenId)
-        onlyTransporterRole
-    {
-        safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
-        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
     }
 
     function supportsInterface(

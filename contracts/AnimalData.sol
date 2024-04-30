@@ -12,6 +12,7 @@ import "./interfaces/IAnimalData.sol";
 import "./interfaces/IRoleAccess.sol";
 import "./interfaces/IOwnerAndCategoryMapper.sol";
 import "./interfaces/ITransportData.sol";
+import "./interfaces/ICarcassData.sol";
 
 contract AnimalData is
     Initializable,
@@ -23,6 +24,7 @@ contract AnimalData is
 {
     IRoleAccess private roleAccessInstance;
     IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
+    ICarcassData private carcassDataInstance;
 
     ITransportData private transportDataInstance;
 
@@ -33,20 +35,29 @@ contract AnimalData is
         );
         _;
     }
-    /*
+
     modifier onlySlaughterRole() {
         require(
-            hasRole(RoleAccess.SLAUGHTER_ROLE, msg.sender),
+            roleAccessInstance.onlySlaughterRole(msg.sender),
             "Caller is not a slaughterer"
         );
         _;
-    } */
+    }
 
     modifier onlyTokenOwner(uint256 tokenId) {
         require(
             ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId) ==
                 msg.sender,
             "Caller is not the owner of the token"
+        );
+        _;
+    }
+
+    modifier onlyAnimalNFT(uint256 tokenId) {
+        require(
+            ownerAndCategoryMapperInstance.getTokenCategoryType(tokenId) ==
+                CategoryTypes.Types.Animal,
+            "Token is not an animal NFT"
         );
         _;
     }
@@ -65,8 +76,7 @@ contract AnimalData is
     function initialize(
         address defaultAdmin,
         address roleAccessContract,
-        address ownerAndCategoryMapperAddress,
-        address transportDataAddress
+        address ownerAndCategoryMapperAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
@@ -78,7 +88,6 @@ contract AnimalData is
         ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
             ownerAndCategoryMapperAddress
         );
-        transportDataInstance = ITransportData(transportDataAddress);
     }
 
     mapping(uint256 => IAnimalData.AnimalInfo) private _tokenAnimalData;
@@ -175,9 +184,7 @@ contract AnimalData is
         return _tokenAnimalData[tokenId];
     }
 
-    function killAnimal(
-        uint256 animalId
-    ) external override /* onlySlaughterRole */ {
+    function killAnimal(uint256 animalId) external override onlySlaughterRole {
         AnimalInfo storage animal = _tokenAnimalData[animalId];
         require(
             animal.isLifeCycleOver == false,
@@ -186,19 +193,10 @@ contract AnimalData is
         animal.isLifeCycleOver = true;
     }
 
-    function transferAnimalToTransporter(
+    function transferAnimal(
         uint256 tokenId,
         address receiver
-    ) external onlyTokenOwner(tokenId) {
-        safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
-        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
-        transportDataInstance.createTransportData(receiver, tokenId);
-    }
-
-    function transferAnimalToSlaugtherer(
-        uint256 tokenId,
-        address receiver
-    ) external onlyTokenOwner(tokenId) {
+    ) external onlyAnimalNFT(tokenId) onlyTokenOwner(tokenId) {
         safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
         ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
     }
