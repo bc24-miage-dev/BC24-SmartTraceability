@@ -9,6 +9,7 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IManufacturedProductData.sol";
 import "./interfaces/IRoleAccess.sol";
 import "./interfaces/IOwnerAndCategoryMapper.sol";
+import "./libraries/utils.sol";
 
 contract ManufacturedProductData is
     Initializable,
@@ -87,6 +88,107 @@ contract ManufacturedProductData is
         }
         _;
     }
+
+     modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
+        for (uint256 i = 0; i < tokenIds.length; i++) {
+            require(
+                msg.sender ==
+                    ownerAndCategoryMapperInstance.getOwnerOfToken(tokenIds[i]),
+                "Caller does not own all of the tokens"
+            );
+        }
+        _;
+    }
+
+    /*     function createManufacturedProductData(
+        uint256 recipeId,
+        uint256[] memory meatId,
+        string memory productName,
+        uint256 price,
+        string memory description
+    ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
+        uint256 tokenId = roleAccessInstance.getNextTokenId();
+
+        if (recipeId == 0) {
+            //create a new product
+            _mint(msg.sender, tokenId, 1, "");
+            manufacturedProductDataInstance.createManufacturedProductData(
+                tokenId,
+                meatId,
+                productName,
+                price,
+                description
+            );
+        } else {
+            for (uint256 i = 0; i < meatId.length; i++) {
+                require(
+                    checkIfMeatCanBeUsedForRecipe(recipeId, meatId[i]),
+                    "Meat is not valid for the recipe"
+                );
+            }
+            IRecipeData.RecipeInfo memory recipe = recipeDataInstance
+                .getRecipeData(recipeId);
+
+            require(
+                Utils.compareArrayLength(
+                    meatId.length,
+                    recipe.ingredientMeat.length
+                ),
+                "Meat count does not match recipe"
+            );
+
+            _mint(msg.sender, tokenId, 1, "");
+
+            manufacturedProductDataInstance.createManufacturedProductData(
+                tokenId,
+                meatId,
+                recipe.recipeName,
+                price,
+                recipe.recipeName
+            );
+        }
+
+        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
+        roleAccessInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.ManufacturedProduct
+        );
+        roleAccessInstance.setNextTokenId(tokenId + 1);
+        emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
+    }
+
+    function checkIfMeatCanBeUsedForRecipe(
+        uint256 recipeId,
+        uint256 meatId
+    ) public view returns (bool) {
+        IMeatData.MeatInfo memory meat = meatDataInstance.getMeatData(meatId);
+        ICarcassData.CarcassInfo memory carcass = carcassDataInstance
+            .getCarcassData(meat.carcassId);
+        IAnimalData.AnimalInfo memory animal = animalDataInstance.getAnimalData(
+            carcass.animalId
+        );
+        IRecipeData.RecipeInfo memory recipe = recipeDataInstance.getRecipeData(
+            recipeId
+        );
+
+        bool isPart = false;
+        for (uint256 i = 0; i < recipe.ingredientMeat.length; i++) {
+            if (
+                Utils.compareStrings(
+                    recipe.ingredientMeat[i].animalType,
+                    animal.animalType
+                ) &&
+                Utils.compareStrings(recipe.ingredientMeat[i].part, meat.part)
+            ) {
+                isPart = true;
+                break;
+            }
+        }
+        if (meat.isContaminated) {
+            isPart = false;
+        }
+        return isPart;
+    } */
 
     function createManufacturedProductData(
         uint256[] memory meatIds,
