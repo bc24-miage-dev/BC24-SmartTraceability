@@ -25,6 +25,22 @@ contract RoleAccess is Initializable, IRoleAccess, AccessControlUpgradeable {
         return hasRole(RoleAccessUtils.TRANSPORTER_ROLE, sender);
     }
 
+    function onlySlaughterRole(address sender) external view returns (bool) {
+        return hasRole(RoleAccessUtils.SLAUGHTER_ROLE, sender);
+    }
+
+    function onlyManufacturerRole(address sender) external view returns (bool) {
+        return hasRole(RoleAccessUtils.MANUFACTURERE_ROLE, sender);
+    }
+
+    function onlySellerRole(address sender) external view returns (bool) {
+        return hasRole(RoleAccessUtils.SELLER_ROLE, sender);
+    }
+
+    function onlyMinterRole(address sender) external view returns (bool) {
+        return hasRole(RoleAccessUtils.MINTER_ROLE, sender);
+    }
+
     /*   modifier onlyTransporterRole() {
         require(
             hasRole(RoleAccessUtils.TRANSPORTER_ROLE, msg.sender),

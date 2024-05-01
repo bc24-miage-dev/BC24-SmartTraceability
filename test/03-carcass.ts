@@ -2,17 +2,24 @@ import { expect } from "chai";
 import { SetupService } from "./setupService";
 
 describe("BC24-Carcass", function () {
-  let defaultAdmin:any;
+  let defaultAdmin: any;
   let minter: any;
   let transporter: any;
   let slaughterer: any;
   let breeder: any;
-  let contract: any;
   let animalId: any;
+  let transportId: any;
+
+  let bc24: any;
+  let animalContract: any;
+  let roleAccessContract: any;
+  let ownerAndCategoryMapperContract: any;
+  let transportContract: any;
+  let carcassContract: any;
+
   let setupService: any;
 
   beforeEach(async function () {
-
     /* This it the general setup needed for all the contracts*/
     /* If a new contract is put into an interface it needs to be added likewise in the SetupService */
     setupService = new SetupService();
@@ -23,62 +30,91 @@ describe("BC24-Carcass", function () {
     breeder = setupService.breeder;
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
-    contract = setupService.contract;
+    bc24 = setupService.bc24;
+    animalContract = setupService.animalContract;
+    roleAccessContract = setupService.roleAccessContract;
+    ownerAndCategoryMapperContract =
+      setupService.ownerAndCategoryMapperContract;
+    transportContract = setupService.transportContract;
+    carcassContract = setupService.carcassContract;
 
-    const transaction = await contract
+    const transaction = await animalContract
       .connect(breeder)
-      .createAnimal(breeder.address, "Cow", 10, "male");
-    animalId = transaction.value;
-    await contract
+      .createAnimalData("Cow", 10, "male");
+    const receipt = await transaction.wait();
+    animalId = receipt.logs[1].args[0];
+    await animalContract
       .connect(breeder)
-      .transferToken(animalId, transporter.address);
-    await contract
+      .transferAnimal(animalId, transporter.address);
+
+    await animalContract
       .connect(transporter)
-      .transferToken(animalId, slaughterer.address);
+      .transferAnimal(animalId, slaughterer.address);
   });
 
   it("Test contract", async function () {
-    expect(await contract.uri(0)).to.equal("");
-    expect(await contract.connect(slaughterer).ownerOf(animalId)).to.equal(
-      slaughterer.address
-    );
+    expect(await bc24.uri(0)).to.equal("");
+    expect(
+      await ownerAndCategoryMapperContract
+        .connect(slaughterer)
+        .getOwnerOfToken(animalId)
+    ).to.equal(slaughterer.address);
   });
 
   it("should make sure the animal is still alive", async function () {
-    const animal = await contract.connect(slaughterer).getAnimal(animalId);
+    const animal = await animalContract
+      .connect(slaughterer)
+      .getAnimalData(animalId);
     expect(await animal.isLifeCycleOver).to.equal(false);
   });
 
   it("should create a new carcassNFT which is connected to the now dead animal", async function () {
-    const transaction = await contract
+    const transaction = await animalContract
       .connect(slaughterer)
-      .slaughterAnimal(animalId);
+      .killAnimal(animalId);
 
-    const animal = await contract.connect(slaughterer).getAnimal(animalId);
+    // create carcass data first
+
+    const carcassTransaction = await carcassContract
+      .connect(slaughterer)
+      .createCarcassData(animalId);
+
+    const carcassTransactionReceipt = await carcassTransaction.wait();
+    const carcassId = carcassTransactionReceipt.logs[1].args[0];
+
+    const animal = await animalContract
+      .connect(slaughterer)
+      .getAnimalData(animalId);
     expect(await animal.isLifeCycleOver).to.equal(true);
 
-    const carcassId = transaction.value;
-    const cascas = await contract.connect(slaughterer).getCarcass(carcassId);
+    const cascass = await carcassContract
+      .connect(slaughterer)
+      .getCarcassData(carcassId);
 
-    expect(await cascas.animalId).to.equal(animalId);
+    expect(await cascass.animalId).to.equal(animalId);
   });
 
   it("should not create carcas of already slaughtered animal", async function () {
-    await contract.connect(slaughterer).slaughterAnimal(animalId);
+    await animalContract.connect(slaughterer).killAnimal(animalId);
     await expect(
-      contract.connect(slaughterer).slaughterAnimal(animalId)
+      animalContract.connect(slaughterer).killAnimal(animalId)
     ).to.be.revertedWith("Animal already has been slaughtered");
   });
 
   it("should set carcass data correctly", async function () {
-    const transaction = await contract
+    await animalContract.connect(slaughterer).killAnimal(animalId);
+
+    const carcassTransaction = await carcassContract
       .connect(slaughterer)
-      .slaughterAnimal(animalId);
+      .createCarcassData(animalId);
 
-    const animal = await contract.connect(slaughterer).getAnimal(animalId);
+    const carcassTransactionReceipt = await carcassTransaction.wait();
+    const carcassId = carcassTransactionReceipt.logs[1].args[0];
+
+    const animal = await animalContract
+      .connect(slaughterer)
+      .getAnimalData(animalId);
     expect(await animal.isLifeCycleOver).to.equal(true);
-
-    const carcassId = transaction.value;
 
     const agreementNumber = "AG123";
     const countryOfSlaughter = "Country";
@@ -86,9 +122,9 @@ describe("BC24-Carcass", function () {
     const carcassWeight = 100;
     const isContaminated = false;
 
-    await contract
+    await carcassContract
       .connect(slaughterer)
-      .updateCarcass(
+      .setCarcassData(
         carcassId,
         agreementNumber,
         countryOfSlaughter,
@@ -97,9 +133,9 @@ describe("BC24-Carcass", function () {
         isContaminated
       );
 
-    const carcassInfo = await contract
+    const carcassInfo = await carcassContract
       .connect(slaughterer)
-      .getCarcass(carcassId);
+      .getCarcassData(carcassId);
 
     expect(carcassInfo.agreementNumber).to.equal(agreementNumber);
     expect(carcassInfo.countryOfSlaughter).to.equal(countryOfSlaughter);
@@ -109,14 +145,21 @@ describe("BC24-Carcass", function () {
   });
 
   it("should only be allowed for slaughteres to change the carcass data", async function () {
-    const transaction = await contract
+    const transaction = await animalContract
       .connect(slaughterer)
-      .slaughterAnimal(animalId);
+      .killAnimal(animalId);
 
-    const animal = await contract.connect(slaughterer).getAnimal(animalId);
+    const carcassTransaction = await carcassContract
+      .connect(slaughterer)
+      .createCarcassData(animalId);
+
+    const carcassTransactionReceipt = await carcassTransaction.wait();
+    const carcassId = carcassTransactionReceipt.logs[1].args[0];
+
+    const animal = await animalContract
+      .connect(slaughterer)
+      .getAnimalData(animalId);
     expect(await animal.isLifeCycleOver).to.equal(true);
-
-    const carcassId = transaction.value;
 
     const agreementNumber = "AG123";
     const countryOfSlaughter = "Country";
@@ -125,9 +168,9 @@ describe("BC24-Carcass", function () {
     const isContaminated = false;
 
     await expect(
-      contract
+      carcassContract
         .connect(breeder)
-        .updateCarcass(
+        .setCarcassData(
           carcassId,
           agreementNumber,
           countryOfSlaughter,
@@ -139,30 +182,42 @@ describe("BC24-Carcass", function () {
   });
 
   it("should transfer carcass to transporter", async function () {
-    const transaction = await contract
-      .connect(slaughterer)
-      .slaughterAnimal(animalId);
-    let carcassId = transaction.value;
+    await animalContract.connect(slaughterer).killAnimal(animalId);
 
-    await contract
+    const carcassTransaction = await carcassContract
       .connect(slaughterer)
-      .transferToken(carcassId, transporter.address); ////todo fonction qui transfer que si bc pas impl, receiverOnlyRole not used
+      .createCarcassData(animalId);
 
-    expect(await contract.connect(transporter).ownerOf(carcassId)).to.equal(
-      transporter.address
-    );
+    const carcassTransactionReceipt = await carcassTransaction.wait();
+    const carcassId = carcassTransactionReceipt.logs[1].args[0];
+
+    await carcassContract
+      .connect(slaughterer)
+      .transferCarcass(carcassId, transporter.address); ////todo fonction qui transfer que si bc pas impl, receiverOnlyRole not used
+
+    expect(
+      await ownerAndCategoryMapperContract
+        .connect(transporter)
+        .getOwnerOfToken(carcassId)
+    ).to.equal(transporter.address);
   });
 
   it("should not allow transfer carcass to other role than transporter", async function () {
-    const transaction = await contract
+    const transaction = await animalContract
       .connect(slaughterer)
-      .slaughterAnimal(animalId);
-    const carcassId = transaction.value;
+      .killAnimal(animalId);
+
+    const carcassTransaction = await carcassContract
+      .connect(slaughterer)
+      .createCarcassData(animalId);
+
+    const carcassTransactionReceipt = await carcassTransaction.wait();
+    const carcassId = carcassTransactionReceipt.logs[1].args[0];
 
     await expect(
-      contract
+      carcassContract
         .connect(slaughterer)
-        .transferToken(carcassId, breeder.address) //todo fonction qui transfer que si bc pas impl, receiverOnlyRole not used
-    ).to.be.revertedWith("Caller is not valid receiver");
+        .transferCarcass(carcassId, breeder.address) //todo fonction qui transfer que si bc pas impl, receiverOnlyRole not used
+    ).to.be.revertedWith("Receiver is neither a transporter nor a manufacturer");
   });
 });

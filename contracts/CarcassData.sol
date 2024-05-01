@@ -20,11 +20,9 @@ contract CarcassData is
     ICarcassData
 {
     IRoleAccess private roleAccessInstance;
-    IAnimalData private animalDataInstance;
     IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
 
-    //emits an event when a new token is created
-    event NFTMinted(uint256 tokenId, address owner, string message);
+    mapping(uint256 => ICarcassData.CarcassInfo) private _tokenCarcassData;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -34,7 +32,6 @@ contract CarcassData is
     function initialize(
         address defaultAdmin,
         address roleAccessAddress,
-        address animalDataAddress,
         address ownerAndCategoryMapperAddress
     ) public initializer {
         __ERC1155_init("");
@@ -44,13 +41,49 @@ contract CarcassData is
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         roleAccessInstance = IRoleAccess(roleAccessAddress);
-        animalDataInstance = IAnimalData(animalDataAddress);
         ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
             ownerAndCategoryMapperAddress
         );
     }
 
-    mapping(uint256 => ICarcassData.CarcassInfo) private _tokenCarcassData;
+    /* Event Emitters */
+    event NFTMinted(uint256 tokenId, address owner, string message);
+
+    /* Access controllers */
+    modifier onlyCarcassNFT(uint256 tokenId) {
+        require(
+            ownerAndCategoryMapperInstance.getTokenCategoryType(tokenId) ==
+                CategoryTypes.Types.Carcass,
+            "Token is not an carcass NFT"
+        );
+        _;
+    }
+
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(
+            ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId) ==
+                msg.sender,
+            "Caller is not the owner of the token"
+        );
+        _;
+    }
+
+    modifier onlyToTransporterORManufacturerReceiver(address receiver) {
+        require(
+            roleAccessInstance.onlyTransporterRole(receiver) ||
+                roleAccessInstance.onlyManufacturerRole(receiver),
+            "Receiver is neither a transporter nor a manufacturer"
+        );
+        _;
+    }
+
+    modifier onlySlaughterRole() {
+        require(
+            roleAccessInstance.onlySlaughterRole(msg.sender),
+            "Caller is not a slaughterer"
+        );
+        _;
+    }
 
     function createCarcassData(uint256 animalId) external {
         uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
@@ -77,7 +110,12 @@ contract CarcassData is
         uint256 dateOfSlaughter,
         uint256 carcassWeight,
         bool isContaminated
-    ) external /* onlySlaugthere */ {
+    )
+        external
+        onlySlaughterRole
+        onlyCarcassNFT(tokenId)
+        onlyTokenOwner(tokenId)
+    {
         CarcassInfo storage carcass = _tokenCarcassData[tokenId];
         carcass.agreementNumber = agreementNumber;
         carcass.countryOfSlaughter = countryOfSlaughter;
@@ -98,8 +136,21 @@ contract CarcassData is
         uint256 demiCarcassAWeight,
         uint256 demiCarcassBWeight,
         uint256 carcassId
-    ) external {
-        // needs more details
+    ) external onlyCarcassNFT(tokenId) onlyTokenOwner(tokenId) {
+        //
+    }
+
+    function transferCarcass(
+        uint256 tokenId,
+        address receiver
+    )
+        external
+        onlyCarcassNFT(tokenId)
+        onlyTokenOwner(tokenId)
+        onlyToTransporterORManufacturerReceiver(receiver)
+    {
+        safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
     }
 
     function supportsInterface(

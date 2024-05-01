@@ -7,5 +7,13 @@ interface IRoleAccess {
 
     function onlyTransporterRole(address sender) external view returns (bool);
 
+    function onlySlaughterRole(address sender) external view returns (bool);
+
+    function onlyManufacturerRole(address sender) external view returns (bool);
+
+    function onlySellerRole(address sender) external view returns (bool);
+
+    function onlyMinterRole(address sender) external view returns (bool);
+
     function grantRoleToAddress(address account, string memory role) external;
 }
