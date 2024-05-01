@@ -78,16 +78,6 @@ contract ManufacturedProductData is
         _;
     }
 
-    modifier onlyAllTokenOwner(uint256[] memory tokenIds) {
-        for (uint256 i = 0; i < tokenIds.length; i++) {
-            require(
-                ownerAndCategoryMapperInstance.getOwnerOfToken(tokenIds[i]) ==
-                    msg.sender,
-                "Caller is not the owner of the token"
-            );
-        }
-        _;
-    }
 
      modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
         for (uint256 i = 0; i < tokenIds.length; i++) {
@@ -100,7 +90,7 @@ contract ManufacturedProductData is
         _;
     }
 
-    /*     function createManufacturedProductData(
+    /*     function createManufacturedProductDataFromRecipe (
         uint256 recipeId,
         uint256[] memory meatId,
         string memory productName,
@@ -195,7 +185,7 @@ contract ManufacturedProductData is
         string memory productName,
         uint256 price,
         string memory description
-    ) external onlyAllTokenOwner(meatIds) onlyManufacturerRole {
+    ) external onlyTokenOwnerList(meatIds) onlyManufacturerRole {
         uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);

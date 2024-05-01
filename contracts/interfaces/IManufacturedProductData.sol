@@ -1,21 +1,28 @@
 pragma solidity ^0.8.0;
 
 interface IManufacturedProductData {
-
     struct TimingInfo {
         uint256 creationDate;
         uint256 lastUpdateDate;
     }
 
-      struct ManufacturedProductInfo {
+    struct ManufacturedProductInfo {
         uint256 dateOfManufacturation;
         string productName;
         TimingInfo timingInfo;
-        uint256[] meatIds; 
+        uint256[] meatIds;
         uint256 price;
         string description;
         string category;
     }
+
+ /*    function createManufacturedProductDataFromRecipe(
+        uint256 recipeId,
+        uint256[] memory meatIds,
+        string memory productName,
+        uint256 price,
+        string memory description
+    ) external; */
 
     function createManufacturedProductData(
         uint256[] memory meatIds,
