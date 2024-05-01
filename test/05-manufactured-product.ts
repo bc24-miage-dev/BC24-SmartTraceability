@@ -17,7 +17,7 @@ describe("BC24-Manufactured-Product", function () {
   let meatId: any;
   let meatId2: any;
 
-  let bc24: any;
+
   let animalContract: any;
   let roleAccessContract: any;
   let ownerAndCategoryMapperContract: any;

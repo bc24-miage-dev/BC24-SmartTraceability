@@ -10,7 +10,6 @@ describe("BC24-Breeder", function () {
   let slaughterer: any;
   let breeder: any;
   let random: any;
-  let bc24: any;
   let animalContract: any;
   let roleAccessContract: any;
   let ownerAndCategoryMapperContract: any;
@@ -29,7 +28,6 @@ describe("BC24-Breeder", function () {
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
     random = setupService.random;
-    bc24 = setupService.bc24;
     animalContract = setupService.animalContract;
     roleAccessContract = setupService.roleAccessContract;
     ownerAndCategoryMapperContract = setupService.ownerAndCategoryMapperContract;
@@ -37,7 +35,6 @@ describe("BC24-Breeder", function () {
   });
 
   it("Test contract", async function () {
-    expect(await bc24.uri(0)).to.equal("");
     expect(await animalContract.uri(0)).to.equal("");
   });
 
@@ -56,7 +53,7 @@ describe("BC24-Breeder", function () {
 
     await animalContract.connect(breeder).createAnimalData("Cow", 10, "male");
 
-    const tokenIds = await bc24.connect(breeder).getTokensOfOwner();
+    const tokenIds = await ownerAndCategoryMapperContract.connect(breeder).getTokensOfOwner(breeder.address);
 
     expect(tokenIds.length).to.equal(3);
     expect(tokenIds[0]).to.equal(0);
@@ -145,11 +142,13 @@ describe("BC24-Breeder", function () {
   });
 
   it("should transfer animal to transporter", async function () {
-    await animalContract.connect(breeder).createAnimalData("Cow", 10, "male");
+    const AnimalCreateTransaction = await animalContract.connect(breeder).createAnimalData("Cow", 10, "male");
+    const AnimalCreateReceipt = await AnimalCreateTransaction.wait();
+    const animalId = AnimalCreateReceipt.logs[1].args[0];
 
     await animalContract
       .connect(breeder)
-      .transferAnimalToTransporter(0, transporter.address);
+      .transferAnimal(animalId, transporter.address);
 
     await expect(
       ownerAndCategoryMapperContract.connect(breeder).getTokensOfOwner(breeder.address)
@@ -157,6 +156,7 @@ describe("BC24-Breeder", function () {
 
     await expect(
       ownerAndCategoryMapperContract.connect(transporter).getTokensOfOwner(transporter.address)
-    ).to.eventually.have.lengthOf(2);
+    ).to.eventually.have.lengthOf(1);
   });
+
 });

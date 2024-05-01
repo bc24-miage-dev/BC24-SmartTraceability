@@ -14,7 +14,6 @@ describe("BC24-Meat", function () {
   let carcassId: any;
   let transportId: any;
 
-  let bc24: any;
   let animalContract: any;
   let roleAccessContract: any;
   let ownerAndCategoryMapperContract: any;
@@ -36,7 +35,6 @@ describe("BC24-Meat", function () {
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
     manufacturer = setupService.manufacturer;
-    bc24 = setupService.bc24;
     animalContract = setupService.animalContract;
     roleAccessContract = setupService.roleAccessContract;
     ownerAndCategoryMapperContract =
@@ -83,7 +81,6 @@ describe("BC24-Meat", function () {
   });
 
   it("Test contract", async function () {
-    expect(await bc24.uri(0)).to.equal("");
     expect(
       await ownerAndCategoryMapperContract
         .connect(manufacturer)

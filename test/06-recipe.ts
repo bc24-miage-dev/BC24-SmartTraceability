@@ -13,7 +13,6 @@ describe("BC24-Recipe", function () {
   let animalId: any;
   let carcassId: any;
 
-  let bc24: any;
   let animalContract: any;
   let roleAccessContract: any;
   let ownerAndCategoryMapperContract: any;
@@ -34,7 +33,6 @@ describe("BC24-Recipe", function () {
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
     manufacturer = setupService.manufacturer;
-    bc24 = setupService.bc24;
     animalContract = setupService.animalContract;
     roleAccessContract = setupService.roleAccessContract;
     ownerAndCategoryMapperContract =

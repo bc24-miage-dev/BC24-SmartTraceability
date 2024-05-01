@@ -13,7 +13,6 @@ describe("BC24-Transporter", function () {
   let animalId: any;
   let transportId: any;
 
-  let bc24: any;
   let animalContract: any;
   let roleAccessContract: any;
   let ownerAndCategoryMapperContract: any;
@@ -31,7 +30,6 @@ describe("BC24-Transporter", function () {
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
     random = setupService.random;
-    bc24 = setupService.bc24;
     animalContract = setupService.animalContract;
     roleAccessContract = setupService.roleAccessContract;
     transportContract = setupService.transportContract;
@@ -51,7 +49,6 @@ describe("BC24-Transporter", function () {
   });
 
   it("Test contract", async function () {
-    expect(await bc24.uri(0)).to.equal("");
     expect(
       await ownerAndCategoryMapperContract
         .connect(transporter)
