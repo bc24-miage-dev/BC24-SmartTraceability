@@ -18,8 +18,8 @@ interface IMeatData {
     }
 
     function createMeatData(
-        uint256 tokenId,
         uint256 carcassId,
+        string memory part,
         uint256 weight
     ) external;
 

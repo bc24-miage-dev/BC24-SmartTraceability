@@ -76,7 +76,7 @@ export class SetupService {
     this.animalContract = await upgrades.deployProxy(AnimalContract, [
       this.defaultAdmin.address,
       await this.roleAccessContract.getAddress(),
-      await this.ownerAndCategoryMapperContract.getAddress()
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
 
     await this.animalContract.waitForDeployment();
@@ -93,6 +93,8 @@ export class SetupService {
     const MeatData = await ethers.getContractFactory("MeatData");
     this.meatContract = await upgrades.deployProxy(MeatData, [
       this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
     this.meatContract.waitForDeployment();
 

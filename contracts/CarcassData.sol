@@ -48,6 +48,7 @@ contract CarcassData is
 
     /* Event Emitters */
     event NFTMinted(uint256 tokenId, address owner, string message);
+    event MetaDataChanged(uint256 tokenId, address owner, string message);
 
     /* Access controllers */
     modifier onlyCarcassNFT(uint256 tokenId) {
@@ -123,6 +124,8 @@ contract CarcassData is
         carcass.carcassWeight = carcassWeight;
         carcass.isContaminated = isContaminated;
         carcass.timingInfo.lastUpdateDate = block.timestamp;
+
+        emit MetaDataChanged(tokenId, msg.sender, "Carcass info changed.");
     }
 
     function getCarcassData(
