@@ -101,6 +101,8 @@ export class SetupService {
     const RecipeContract = await ethers.getContractFactory("RecipeData");
     this.recipeContract = await upgrades.deployProxy(RecipeContract, [
       this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
     this.recipeContract.waitForDeployment();
 
@@ -109,7 +111,11 @@ export class SetupService {
     );
     this.manufacturedProductContract = await upgrades.deployProxy(
       ManufacturedProductContract,
-      [this.defaultAdmin.address]
+      [
+        this.defaultAdmin.address,
+        await this.roleAccessContract.getAddress(),
+        await this.ownerAndCategoryMapperContract.getAddress(),
+      ]
     );
     await this.manufacturedProductContract.waitForDeployment();
 

@@ -80,7 +80,7 @@ contract MeatData is
         uint256 carcassId,
         string memory part,
         uint256 weight
-    ) external {
+    ) external onlyTokenOwner(carcassId) onlyManufacturerRole {
         uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);

@@ -8,7 +8,6 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./interfaces/ICarcassData.sol";
 import "./interfaces/IRoleAccess.sol";
-import "./interfaces/IAnimalData.sol";
 import "./interfaces/IOwnerAndCategoryMapper.sol";
 
 contract CarcassData is
@@ -86,7 +85,9 @@ contract CarcassData is
         _;
     }
 
-    function createCarcassData(uint256 animalId) external {
+    function createCarcassData(
+        uint256 animalId
+    ) external onlySlaughterRole onlyTokenOwner(animalId) {
         uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);
