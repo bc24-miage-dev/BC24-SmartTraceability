@@ -10,16 +10,28 @@ describe("BC24-Manufactured-Product", function () {
   let breeder: any;
   let manufacturer: any;
   let contract: any;
-  let random: any;
   let animalId: any;
   let carcassId: any;
+  let transportId: any;
+  let recipeId: any;
   let meatId: any;
   let meatId2: any;
-  let recipeId: any;
+
+  let bc24: any;
+  let animalContract: any;
+  let roleAccessContract: any;
+  let ownerAndCategoryMapperContract: any;
+  let transportContract: any;
+  let carcassContract: any;
+  let meatContract: any;
+  let manufacturedProductContract: any;
+  let recipeContract: any;
 
   let setupService: any;
 
   beforeEach(async function () {
+    /* This it the general setup needed for all the contracts*/
+    /* If a new contract is put into an interface it needs to be added likewise in the SetupService */
     setupService = new SetupService();
     await setupService.setup();
 
@@ -28,45 +40,61 @@ describe("BC24-Manufactured-Product", function () {
     breeder = setupService.breeder;
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
-    random = setupService.random;
     manufacturer = setupService.manufacturer;
-    contract = setupService.contract;
 
-    const transaction = await contract
+
+    animalContract = setupService.animalContract;
+    roleAccessContract = setupService.roleAccessContract;
+    ownerAndCategoryMapperContract =
+      setupService.ownerAndCategoryMapperContract;
+    transportContract = setupService.transportContract;
+    carcassContract = setupService.carcassContract;
+    meatContract = setupService.meatContract;
+    manufacturedProductContract = setupService.manufacturedProductContract;
+    recipeContract = setupService.recipeContract;
+
+    const transaction = await animalContract
       .connect(breeder)
-      .createAnimal(breeder.address, "Cow", 10, "male");
-
+      .createAnimalData("Cow", 10, "male");
     const receipt = await transaction.wait();
-
     animalId = receipt.logs[1].args[0];
 
-    await contract
+    /* Breeder --> Transporter */
+    await animalContract
       .connect(breeder)
-      .transferToken(animalId, transporter.address);
-    await contract
+      .transferAnimal(animalId, transporter.address);
+
+    /* Transporter --> Slaughterer */
+    await animalContract
       .connect(transporter)
-      .transferToken(animalId, slaughterer.address);
+      .transferAnimal(animalId, slaughterer.address);
 
-    const slaugtherTransaction = await contract
-      .connect(slaughterer)
-      .slaughterAnimal(animalId);
-    const receiptSlaughter = await slaugtherTransaction.wait();
-    carcassId = receiptSlaughter.logs[1].args[0];
+    /* Kill Animal */
+    await animalContract.connect(slaughterer).killAnimal(animalId);
 
-    await contract
+    /* Create Carcass */
+    const carcassTransaction = await carcassContract
       .connect(slaughterer)
-      .transferToken(carcassId, transporter.address);
-    await contract
+      .createCarcassData(animalId);
+    const carcassTransactionReceit = await carcassTransaction.wait();
+    carcassId = carcassTransactionReceit.logs[1].args[0];
+
+    /* Carcass --> Transporter */
+    await carcassContract
+      .connect(slaughterer)
+      .transferCarcass(carcassId, transporter.address);
+
+    /* Transporter --> Manufacturer */
+    await carcassContract
       .connect(transporter)
-      .transferToken(carcassId, manufacturer.address);
+      .transferCarcass(carcassId, manufacturer.address);
 
-    const meatTransaction = await contract
+    const MeatTransaction1 = await meatContract
       .connect(manufacturer)
-      .createMeat(carcassId);
+      .createMeatData(carcassId, "MeatPartA", 100);
 
-    const meatTransactionReceit = await meatTransaction.wait();
-
-    meatId = meatTransactionReceit.logs[1].args[0];
+    const MeatTransaction1Receit = await MeatTransaction1.wait();
+    meatId = MeatTransaction1Receit.logs[1].args[0];
 
     const agreementNumber = "1111";
     const countryOfCutting = "Schweiz";
@@ -75,9 +103,9 @@ describe("BC24-Manufactured-Product", function () {
     const isContaminated = false;
     const weight = 100;
 
-    await contract
+    await meatContract
       .connect(manufacturer)
-      .updateMeat(
+      .setMeatData(
         meatId,
         agreementNumber,
         countryOfCutting,
@@ -86,16 +114,16 @@ describe("BC24-Manufactured-Product", function () {
         isContaminated,
         weight
       );
-
-    const transaction2 = await contract
+    const MeatTransaction2 = await meatContract
       .connect(manufacturer)
-      .createMeat(carcassId);
+      .createMeatData(carcassId, "MeatPartA", 100);
 
-    const receipt2 = await transaction2.wait();
+    const MeatTransaction2Receit = await MeatTransaction2.wait();
+    meatId2 = MeatTransaction2Receit.logs[1].args[0];
 
-    await contract
+    await meatContract
       .connect(manufacturer)
-      .updateMeat(
+      .setMeatData(
         meatId2,
         "2222",
         countryOfCutting,
@@ -110,10 +138,11 @@ describe("BC24-Manufactured-Product", function () {
     // These need to allign with the meat parts
     const ingredientMeat: string[] = ["Cow", "Cow"];
     const ingredientPart: string[] = ["Tongue", "Eye"];
+    const ingredientWeight: number[] = [100, 100];
 
-    const recepiTransaction = await contract
+    const recepiTransaction = await recipeContract
       .connect(manufacturer)
-      .createRecipe(recipeName, description, ingredientMeat, ingredientPart);
+      .createRecipeData(recipeName, description, ingredientMeat, ingredientPart, ingredientWeight);
 
     const recipeReceit = await recepiTransaction.wait();
 
@@ -122,20 +151,20 @@ describe("BC24-Manufactured-Product", function () {
 
   it("Test ownershipcreate", async function () {
     // expect(await contract.uri(0)).to.equal("");
-    const transaction = await contract
+    const transaction = await carcassContract
       .connect(manufacturer)
       .createMeat(carcassId);
     // const meatId = transaction.value;
     const receipt = await transaction.wait();
     const meatId = receipt.logs[1].args[0];
 
-    expect(await contract.connect(manufacturer).ownerOf(meatId)).to.equal(
-      manufacturer.address
-    );
+    expect(
+      await ownerAndCategoryMapperContract.connect(manufacturer).getOwnerOfToken(meatId)
+    ).to.equal(manufacturer.address);
   });
 
   it("create manufacturedproduct data", async function () {
-    const manufacturedProductTransaction = await contract
+    const manufacturedProductTransaction = await manufacturedProductContract
       .connect(manufacturer)
       .createManufacturedProductData(0, [meatId], "Test", 500, "test");
 
@@ -146,7 +175,7 @@ describe("BC24-Manufactured-Product", function () {
   });
 
   it("update manufacturedproduct data", async function () {
-    const productTranscation = await contract
+    const productTranscation = await manufacturedProductContract
       .connect(manufacturer)
       .createManufacturedProductData(0, [meatId], "Test", 500, "test");
 
@@ -168,7 +197,7 @@ describe("BC24-Manufactured-Product", function () {
         description
       );
 
-    const manufacturedProduct = await contract
+    const manufacturedProduct = await manufacturedProductContract
       .connect(manufacturer)
       .getManufacturedProduct(manufacturedProductId);
 
@@ -179,7 +208,7 @@ describe("BC24-Manufactured-Product", function () {
   });
 
   it("should show that meat is part of recipe", async function () {
-    const checkIMeat = await contract
+    const checkIMeat = await manufacturedProductContract
       .connect(manufacturer)
       .checkIfMeatCanBeUsedForRecipe(recipeId, meatId);
 
@@ -187,7 +216,7 @@ describe("BC24-Manufactured-Product", function () {
   });
 
   it("should show that meat is not part of recipe", async function () {
-    const checkIMeat = await contract
+    const checkIMeat = await manufacturedProductContract
       .connect(manufacturer)
       .checkIfMeatCanBeUsedForRecipe(recipeId, meatId2);
 
@@ -196,7 +225,7 @@ describe("BC24-Manufactured-Product", function () {
 
   it("should not allow to create manufacturedProduct with recipe if wrong meat is present", async function () {
     await expect(
-      contract
+      manufacturedProductContract
         .connect(manufacturer)
         .createManufacturedProductData(recipeId, [meatId, meatId2], "", 50, "")
     ).to.be.revertedWith("Meat is not valid for the recipe");
@@ -204,7 +233,7 @@ describe("BC24-Manufactured-Product", function () {
 
   it("should not allow to create manufacturedProduct with recipe if not all meat is present", async function () {
     await expect(
-      contract
+      manufacturedProductContract
         .connect(manufacturer)
         .createManufacturedProductData(recipeId, [meatId2], "", 50, "")
     ).to.be.revertedWith("Meat is not valid for the recipe");
@@ -218,7 +247,7 @@ describe("BC24-Manufactured-Product", function () {
     const isContaminated = false;
     const weight = 100;
 
-    await contract
+    await manufacturedProductContract
       .connect(manufacturer)
       .updateMeat(
         meatId2,
@@ -230,13 +259,13 @@ describe("BC24-Manufactured-Product", function () {
         weight
       );
 
-    const productTranscation = await contract
+    const productTranscation = await manufacturedProductContract
       .connect(manufacturer)
       .createManufacturedProductData(recipeId, [meatId, meatId2], "", 50, "");
 
     const productReceit = await productTranscation.wait();
 
-    const getManufacturedProduct = await contract
+    const getManufacturedProduct = await manufacturedProductContract
       .connect(manufacturer)
       .getManufacturedProduct(productReceit.logs[1].args[0]);
 

@@ -119,22 +119,6 @@ export class SetupService {
     );
     await this.manufacturedProductContract.waitForDeployment();
 
-    /* This is the main contract that takes all the addresses of the other contracst */
-    const BC24Contract = await ethers.getContractFactory("BC24");
-    this.bc24 = await upgrades.deployProxy(BC24Contract, [
-      this.defaultAdmin.address,
-      await this.animalContract.getAddress(),
-      await this.carcassContract.getAddress(),
-      await this.recipeContract.getAddress(),
-      await this.meatContract.getAddress(),
-      await this.transportContract.getAddress(),
-      await this.manufacturedProductContract.getAddress(),
-      await this.roleAccessContract.getAddress(),
-      await this.ownerAndCategoryMapperContract.getAddress(),
-    ]);
-
-    await this.bc24.waitForDeployment();
-
     /* Grant roles */
     await this.roleAccessContract
       .connect(this.defaultAdmin)
