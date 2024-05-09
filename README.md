@@ -14,66 +14,14 @@ npm install
 npm test
 ```
 
+`./test` holds all the test for each contract. 
+
+See 
+`./test/setupSerive.ts` 
+for how the contracts are setup.
+
 ## Dev
 Start local chain: 
 ```
 npx hardhat node
-```
-
-Deploy the contract locally:
-
-```
-npx hardhat run --network localhost scripts/deploy.ts
-
-```
-Note down the address of `Proxy deployed to 0x...`
-Access console: 
-```
-npx hardhat console --network localhost
-```
-
-Create Token: 
-```
-const BC24 = await ethers.getContractFactory("BC24");
-const bc = await BC24.attach("0x8A791620dd6260079BF849Dc5567aDC3F2FdC318");
-await bc.createToken("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
-await bc.addBreedingInfo(0,"Cow","Zurich","male", 300, "healthy");
-```
-This will give you a tokenid
-
-Inspect token:
-
-```
-await bc.getMetadata(<id>)
-```
-
-Delete token:
-
-```
-await bc.destroyToken(<id>)
-```
-
-## Python web3 calls
-I created an additional python file that illustrates the web3 python calls. 
-
-Create venv
-```
-cd python_script
-python -m venv env
-source env/bin/activate
-```
-
-Install 
-```
-pip install -r requirements.txt 
-```
-
-Make sure 
-1) The hardhat local node is running (see above)
-2) You deploy the contract (see above)
-3) You add the contract address (from step 2) to the python script
-
-Run and enjoy: 
-```
-python main.py
 ```
