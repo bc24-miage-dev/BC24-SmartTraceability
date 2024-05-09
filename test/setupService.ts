@@ -115,6 +115,10 @@ export class SetupService {
         this.defaultAdmin.address,
         await this.roleAccessContract.getAddress(),
         await this.ownerAndCategoryMapperContract.getAddress(),
+        await this.animalContract.getAddress(),
+        await this.carcassContract.getAddress(),
+        await this.meatContract.getAddress(),
+        await this.recipeContract.getAddress(),
       ]
     );
     await this.manufacturedProductContract.waitForDeployment();

@@ -16,13 +16,11 @@ interface IManufacturedProductData {
         string category;
     }
 
- /*    function createManufacturedProductDataFromRecipe(
+    function createManufacturedProductDataFromRecipe(
         uint256 recipeId,
         uint256[] memory meatIds,
-        string memory productName,
-        uint256 price,
-        string memory description
-    ) external; */
+        uint256 price
+    ) external;
 
     function createManufacturedProductData(
         uint256[] memory meatIds,
@@ -38,6 +36,11 @@ interface IManufacturedProductData {
         uint256 price,
         string memory description
     ) external;
+
+    function checkIfMeatCanBeUsedForRecipe(
+        uint256 recipeId,
+        uint256 meatId
+    ) external view returns (bool);
 
     function getManufacturedProductData(
         uint256 tokenId

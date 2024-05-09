@@ -151,9 +151,9 @@ describe("BC24-Manufactured-Product", function () {
 
   it("Test ownershipcreate", async function () {
     // expect(await contract.uri(0)).to.equal("");
-    const transaction = await carcassContract
+    const transaction = await meatContract
       .connect(manufacturer)
-      .createMeat(carcassId);
+      .createMeatData(carcassId, "MeatPartA", 100);
     // const meatId = transaction.value;
     const receipt = await transaction.wait();
     const meatId = receipt.logs[1].args[0];
@@ -166,7 +166,7 @@ describe("BC24-Manufactured-Product", function () {
   it("create manufacturedproduct data", async function () {
     const manufacturedProductTransaction = await manufacturedProductContract
       .connect(manufacturer)
-      .createManufacturedProductData(0, [meatId], "Test", 500, "test");
+      .createManufacturedProductData([meatId], "Test", 500, "test description");
 
     const receipt = await manufacturedProductTransaction.wait();
     expect(receipt.logs[1].args[0]).to.equal(5);
@@ -177,7 +177,7 @@ describe("BC24-Manufactured-Product", function () {
   it("update manufacturedproduct data", async function () {
     const productTranscation = await manufacturedProductContract
       .connect(manufacturer)
-      .createManufacturedProductData(0, [meatId], "Test", 500, "test");
+      .createManufacturedProductData([meatId], "Test", 500, "test");
 
     const receipt = await productTranscation.wait();
     const manufacturedProductId = receipt.logs[1].args[0];
@@ -187,9 +187,9 @@ describe("BC24-Manufactured-Product", function () {
     const price = 50;
     const description = "Schnitzel aus der Schweiz";
 
-    await contract
+    await manufacturedProductContract
       .connect(manufacturer)
-      .updateManufacturedProduct(
+      .setManufacturedProductData(
         manufacturedProductId,
         dateOfManufacturation,
         productName,
@@ -199,7 +199,7 @@ describe("BC24-Manufactured-Product", function () {
 
     const manufacturedProduct = await manufacturedProductContract
       .connect(manufacturer)
-      .getManufacturedProduct(manufacturedProductId);
+      .getManufacturedProductData(manufacturedProductId);
 
     expect(manufacturedProduct.productName).to.equal(productName);
     expect(manufacturedProduct.dateOfManufacturation).to.equal(
@@ -227,7 +227,7 @@ describe("BC24-Manufactured-Product", function () {
     await expect(
       manufacturedProductContract
         .connect(manufacturer)
-        .createManufacturedProductData(recipeId, [meatId, meatId2], "", 50, "")
+        .createManufacturedProductDataFromRecipe(recipeId, [meatId, meatId2], 50)
     ).to.be.revertedWith("Meat is not valid for the recipe");
   });
 
@@ -235,7 +235,7 @@ describe("BC24-Manufactured-Product", function () {
     await expect(
       manufacturedProductContract
         .connect(manufacturer)
-        .createManufacturedProductData(recipeId, [meatId2], "", 50, "")
+        .createManufacturedProductDataFromRecipe(recipeId, [meatId2], 50)
     ).to.be.revertedWith("Meat is not valid for the recipe");
   });
 
@@ -247,9 +247,10 @@ describe("BC24-Manufactured-Product", function () {
     const isContaminated = false;
     const weight = 100;
 
-    await manufacturedProductContract
+
+    await meatContract
       .connect(manufacturer)
-      .updateMeat(
+      .setMeatData(
         meatId2,
         agreementNumber,
         countryOfCutting,
@@ -261,13 +262,14 @@ describe("BC24-Manufactured-Product", function () {
 
     const productTranscation = await manufacturedProductContract
       .connect(manufacturer)
-      .createManufacturedProductData(recipeId, [meatId, meatId2], "", 50, "");
+      .createManufacturedProductDataFromRecipe(recipeId, [meatId, meatId2], 50);
+
 
     const productReceit = await productTranscation.wait();
 
     const getManufacturedProduct = await manufacturedProductContract
       .connect(manufacturer)
-      .getManufacturedProduct(productReceit.logs[1].args[0]);
+      .getManufacturedProductData(productReceit.logs[1].args[0]);
 
     expect(getManufacturedProduct.price).to.equal(50);
     expect(getManufacturedProduct.meatIds[0]).to.equal(meatId);

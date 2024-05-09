@@ -9,6 +9,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./interfaces/IManufacturedProductData.sol";
 import "./interfaces/IRoleAccess.sol";
 import "./interfaces/IOwnerAndCategoryMapper.sol";
+import "./interfaces/IAnimalData.sol";
+import "./interfaces/ICarcassData.sol";
+import "./interfaces/IMeatData.sol";
+import "./interfaces/IRecipeData.sol";
 import "./libraries/utils.sol";
 
 contract ManufacturedProductData is
@@ -16,11 +20,14 @@ contract ManufacturedProductData is
     ERC1155Upgradeable,
     AccessControlUpgradeable,
     ERC1155BurnableUpgradeable,
-    UUPSUpgradeable,
     IManufacturedProductData
 {
     IRoleAccess private roleAccessInstance;
     IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
+    IAnimalData private animalDataInstance;
+    ICarcassData private carcassDataInstance;
+    IMeatData private meatDataInstance;
+    IRecipeData private recipeDataInstance;
 
     mapping(uint256 => IManufacturedProductData.ManufacturedProductInfo)
         private _tokenProductData;
@@ -33,18 +40,25 @@ contract ManufacturedProductData is
     function initialize(
         address defaultAdmin,
         address roleAccessAddress,
-        address ownerAndCategoryMapperAddress
+        address ownerAndCategoryMapperAddress,
+        address animalDataAddress,
+        address carcassDataAddress,
+        address meatDataAddress,
+        address recipeDataAddress
     ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
-        __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         roleAccessInstance = IRoleAccess(roleAccessAddress);
         ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
             ownerAndCategoryMapperAddress
         );
+        meatDataInstance = IMeatData(meatDataAddress);
+        carcassDataInstance = ICarcassData(carcassDataAddress);
+        animalDataInstance = IAnimalData(animalDataAddress);
+        recipeDataInstance = IRecipeData(recipeDataAddress);
     }
 
     /* Event Emitters */
@@ -78,8 +92,7 @@ contract ManufacturedProductData is
         _;
     }
 
-
-     modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
+    modifier onlyTokenOwnerList(uint256[] memory tokenIds) {
         for (uint256 i = 0; i < tokenIds.length; i++) {
             require(
                 msg.sender ==
@@ -90,60 +103,33 @@ contract ManufacturedProductData is
         _;
     }
 
-    /*     function createManufacturedProductDataFromRecipe (
+    function createManufacturedProductDataFromRecipe(
         uint256 recipeId,
-        uint256[] memory meatId,
-        string memory productName,
-        uint256 price,
-        string memory description
-    ) public onlyManufacturerRole onlyTokenOwnerList(meatId) returns (uint256) {
-        uint256 tokenId = roleAccessInstance.getNextTokenId();
-
-        if (recipeId == 0) {
-            //create a new product
-            _mint(msg.sender, tokenId, 1, "");
-            manufacturedProductDataInstance.createManufacturedProductData(
-                tokenId,
-                meatId,
-                productName,
-                price,
-                description
-            );
-        } else {
-            for (uint256 i = 0; i < meatId.length; i++) {
-                require(
-                    checkIfMeatCanBeUsedForRecipe(recipeId, meatId[i]),
-                    "Meat is not valid for the recipe"
-                );
-            }
-            IRecipeData.RecipeInfo memory recipe = recipeDataInstance
-                .getRecipeData(recipeId);
-
+        uint256[] memory meatIds,
+        uint256 price
+    ) public onlyManufacturerRole onlyTokenOwnerList(meatIds) {
+        for (uint256 i = 0; i < meatIds.length; i++) {
             require(
-                Utils.compareArrayLength(
-                    meatId.length,
-                    recipe.ingredientMeat.length
-                ),
-                "Meat count does not match recipe"
-            );
-
-            _mint(msg.sender, tokenId, 1, "");
-
-            manufacturedProductDataInstance.createManufacturedProductData(
-                tokenId,
-                meatId,
-                recipe.recipeName,
-                price,
-                recipe.recipeName
+                checkIfMeatCanBeUsedForRecipe(recipeId, meatIds[i]),
+                "Meat is not valid for the recipe"
             );
         }
-
-        roleAccessInstance.setOwnerOfToken(tokenId, msg.sender);
-        roleAccessInstance.setTokenCategoryType(
-            tokenId,
-            CategoryTypes.Types.ManufacturedProduct
+        IRecipeData.RecipeInfo memory recipe = recipeDataInstance.getRecipeData(
+            recipeId
         );
-        roleAccessInstance.setNextTokenId(tokenId + 1);
+
+        require(
+            Utils.compareArrayLength(meatIds.length, recipe.ingredient.length),
+            "Meat count does not match recipe"
+        );
+
+        uint256 tokenId = createManufacturedProductDataInternally(
+            meatIds,
+            recipe.recipeName,
+            price,
+            recipe.description
+        );
+
         emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
     }
 
@@ -162,13 +148,12 @@ contract ManufacturedProductData is
         );
 
         bool isPart = false;
-        for (uint256 i = 0; i < recipe.ingredientMeat.length; i++) {
+        for (uint256 i = 0; i < recipe.ingredient.length; i++) {
             if (
                 Utils.compareStrings(
-                    recipe.ingredientMeat[i].animalType,
+                    recipe.ingredient[i].animalType,
                     animal.animalType
-                ) &&
-                Utils.compareStrings(recipe.ingredientMeat[i].part, meat.part)
+                ) && Utils.compareStrings(recipe.ingredient[i].part, meat.part)
             ) {
                 isPart = true;
                 break;
@@ -178,7 +163,7 @@ contract ManufacturedProductData is
             isPart = false;
         }
         return isPart;
-    } */
+    }
 
     function createManufacturedProductData(
         uint256[] memory meatIds,
@@ -186,6 +171,22 @@ contract ManufacturedProductData is
         uint256 price,
         string memory description
     ) external onlyTokenOwnerList(meatIds) onlyManufacturerRole {
+        uint256 tokenId = createManufacturedProductDataInternally(
+            meatIds,
+            productName,
+            price,
+            description
+        );
+
+        emit NFTMinted(tokenId, msg.sender, "ManufacturedProduct created");
+    }
+
+    function createManufacturedProductDataInternally(
+        uint256[] memory meatIds,
+        string memory productName,
+        uint256 price,
+        string memory description
+    ) internal returns (uint256) {
         uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
         _mint(msg.sender, tokenId, 1, "");
         ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);
@@ -203,6 +204,8 @@ contract ManufacturedProductData is
         product.description = description;
         product.timingInfo.creationDate = block.timestamp;
         product.category = "ManufacturedProduct";
+
+        return tokenId;
     }
 
     function setManufacturedProductData(
@@ -234,8 +237,4 @@ contract ManufacturedProductData is
         override(AccessControlUpgradeable, ERC1155Upgradeable)
         returns (bool)
     {}
-
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal virtual override {}
 }
