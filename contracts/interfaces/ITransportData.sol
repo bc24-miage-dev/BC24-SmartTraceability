@@ -1,8 +1,7 @@
 pragma solidity ^0.8.0;
 
 interface ITransportData {
-
-       struct TimingInfo {
+    struct TimingInfo {
         uint256 creationDate;
         uint256 lastUpdateDate;
     }
@@ -10,14 +9,13 @@ interface ITransportData {
         uint256 duration;
         uint256 temperature;
         uint256 humidity;
-        uint256 creationDate;
-        uint256 lastUpdateDate;
         TimingInfo timingInfo;
+        uint256 animalId;
         string category;
         bool isContaminated;
     }
 
-    function createTransportData(uint256 tokenId) external ;
+    function createTransportData(uint256 animalId) external;
 
     function setTransportData(
         uint256 tokenId,

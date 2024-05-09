@@ -7,8 +7,16 @@ export class SetupService {
   slaughterer: any;
   breeder: any;
   random: any;
-  contract: any;
   manufacturer: any;
+  bc24: any;
+  roleAccessContract: any;
+  animalContract: any;
+  carcassContract: any;
+  transportContract: any;
+  meatContract: any;
+  recipeContract: any;
+  manufacturedProductContract: any;
+  ownerAndCategoryMapperContract: any;
 
   constructor() {
     this.defaultAdmin = {};
@@ -16,9 +24,16 @@ export class SetupService {
     this.transporter = {};
     this.slaughterer = {};
     this.breeder = {};
-    this.contract = {};
+    this.bc24 = {};
     this.random = {};
     this.manufacturer = {};
+    this.animalContract = {};
+    this.carcassContract = {};
+    this.transportContract = {};
+    this.meatContract = {};
+    this.recipeContract = {};
+    this.roleAccessContract = {};
+    this.ownerAndCategoryMapperContract = {};
   }
 
   async setup() {
@@ -32,65 +47,96 @@ export class SetupService {
     this.manufacturer = (await ethers.getSigners())[6];
 
     /* Add interfaces here like below */
-    const AnimalContract = await ethers.getContractFactory("AnimalData");
-    const animalContract = await upgrades.deployProxy(AnimalContract, [
-      this.defaultAdmin.address,
-    ]);
-    await animalContract.waitForDeployment();
 
-    const CarcassContract = await ethers.getContractFactory("CarcassData");
-    const carcassContract = await upgrades.deployProxy(CarcassContract, [
+    const OwnerAndCategoryMapper = await ethers.getContractFactory(
+      "OwnerAndCategoryMapper"
+    );
+    this.ownerAndCategoryMapperContract = await upgrades.deployProxy(
+      OwnerAndCategoryMapper,
+      [this.defaultAdmin.address]
+    );
+    await this.ownerAndCategoryMapperContract.waitForDeployment();
+
+    const RoleAccess = await ethers.getContractFactory("RoleAccess");
+    this.roleAccessContract = await upgrades.deployProxy(RoleAccess, [
       this.defaultAdmin.address,
     ]);
-    await carcassContract.waitForDeployment();
+    await this.roleAccessContract.waitForDeployment();
 
     const TransportData = await ethers.getContractFactory("TransportData");
-    const transportContract = await upgrades.deployProxy(TransportData, [
+    this.transportContract = await upgrades.deployProxy(TransportData, [
       this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
-    await transportContract.waitForDeployment();
+    await this.transportContract.waitForDeployment();
+
+    /* Add interfaces here like below */
+    const AnimalContract = await ethers.getContractFactory("AnimalData");
+    this.animalContract = await upgrades.deployProxy(AnimalContract, [
+      this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
+    ]);
+
+    await this.animalContract.waitForDeployment();
+
+    const CarcassContract = await ethers.getContractFactory("CarcassData");
+    this.carcassContract = await upgrades.deployProxy(CarcassContract, [
+      this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
+    ]);
+    await this.carcassContract.waitForDeployment();
 
     // Déploiement du contrat MeatData
     const MeatData = await ethers.getContractFactory("MeatData");
-    const meatContract = await upgrades.deployProxy(MeatData, [
+    this.meatContract = await upgrades.deployProxy(MeatData, [
       this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
-    await meatContract.waitForDeployment();
+    this.meatContract.waitForDeployment();
 
     const RecipeContract = await ethers.getContractFactory("RecipeData");
-    const recipeContract = await upgrades.deployProxy(RecipeContract, [
+    this.recipeContract = await upgrades.deployProxy(RecipeContract, [
       this.defaultAdmin.address,
+      await this.roleAccessContract.getAddress(),
+      await this.ownerAndCategoryMapperContract.getAddress(),
     ]);
-    await recipeContract.waitForDeployment();
+    this.recipeContract.waitForDeployment();
 
-    /* This is the main contract that takes all the addresses of the other contracst */
-    const BC24Contract = await ethers.getContractFactory("BC24");
-    this.contract = await upgrades.deployProxy(BC24Contract, [
-      this.defaultAdmin.address,
-      await animalContract.getAddress(),
-      await carcassContract.getAddress(),
-      await recipeContract.getAddress(),
-      await meatContract.getAddress(),
-      await transportContract.getAddress(),
-      /* add new contract addresses here */
-    ]);
-
-    await this.contract.waitForDeployment();
+    const ManufacturedProductContract = await ethers.getContractFactory(
+      "ManufacturedProductData"
+    );
+    this.manufacturedProductContract = await upgrades.deployProxy(
+      ManufacturedProductContract,
+      [
+        this.defaultAdmin.address,
+        await this.roleAccessContract.getAddress(),
+        await this.ownerAndCategoryMapperContract.getAddress(),
+        await this.animalContract.getAddress(),
+        await this.carcassContract.getAddress(),
+        await this.meatContract.getAddress(),
+        await this.recipeContract.getAddress(),
+      ]
+    );
+    await this.manufacturedProductContract.waitForDeployment();
 
     /* Grant roles */
-    await this.contract
+    await this.roleAccessContract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.breeder.address, "BREEDER_ROLE");
-    await this.contract
+    await this.roleAccessContract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.breeder.address, "MINTER_ROLE");
-    await this.contract
+    await this.roleAccessContract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.transporter.address, "TRANSPORTER_ROLE");
-    await this.contract
+    await this.roleAccessContract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.slaughterer.address, "SLAUGHTER_ROLE");
-    await this.contract
+    await this.roleAccessContract
       .connect(this.defaultAdmin)
       .grantRoleToAddress(this.manufacturer.address, "MANUFACTURERE_ROLE");
   }

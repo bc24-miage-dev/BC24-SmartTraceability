@@ -51,6 +51,15 @@ async function main() {
   const recipeDataAddress = await recipeContract.getAddress();
   console.log(`Recipe Contract deployed to ${recipeDataAddress}`);
 
+  // Déploiement du contrat RecipeData
+  const ManufacturedProductContract = await ethers.getContractFactory("ManufacturedProductData");
+  const manufacteredProductContract = await upgrades.deployProxy(ManufacturedProductContract, [
+    defaultAdmin,
+  ]);
+  await manufacteredProductContract.waitForDeployment();
+  const manufacteredProductDataAdress = await manufacteredProductContract.getAddress();
+  console.log(`Manufactured Product Contract deployed to ${manufacteredProductDataAdress}`);
+
   // Déploiement du contrat BC24 en utilisant les adresses des contrats déployés comme dépendances
   const ContractFactory = await ethers.getContractFactory("BC24");
   const contract = await upgrades.deployProxy(ContractFactory, [
@@ -60,6 +69,7 @@ async function main() {
     recipeDataAddress,
     meatDataAddress,
     transportDataAddress,
+    manufacteredProductDataAdress
   ]);
   await contract.waitForDeployment();
   const bc24Address = await contract.getAddress();

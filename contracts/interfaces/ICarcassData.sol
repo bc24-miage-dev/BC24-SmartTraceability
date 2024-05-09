@@ -1,7 +1,6 @@
 pragma solidity ^0.8.20;
 
 interface ICarcassData {
-
     struct TimingInfo {
         uint256 creationDate;
         uint256 lastUpdateDate;
@@ -18,9 +17,9 @@ interface ICarcassData {
         bool isContaminated;
     }
 
-    function createCarcassData(uint256 tokenId, uint256 animalId) external;
+    function createCarcassData(uint256 animalId) external;
 
-     function createDemiCarcass(
+    function createDemiCarcass(
         uint256 tokenId,
         uint256 demiCarcassAWeight,
         uint256 demiCarcassBWeight,
@@ -38,7 +37,7 @@ interface ICarcassData {
         uint256 dateOfSlaughter,
         uint256 carcassWeight,
         bool isContaminated
-    ) external ;
+    ) external;
 
     function test() external pure returns (string memory);
 }

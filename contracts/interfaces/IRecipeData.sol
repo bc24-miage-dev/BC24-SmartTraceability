@@ -1,28 +1,37 @@
 pragma solidity ^0.8.20;
 
-interface IRecipeData{
+interface IRecipeData {
     struct RecipeInfo {
         string recipeName;
         string description;
-        IngredientMeat[] ingredientMeat;
+        Ingredient[] ingredient;
     }
 
-    struct IngredientMeat {
+    struct Ingredient {
         string part;
         string animalType;
+        uint256 weight;
     }
 
     function createRecipeData(
-        uint256 recipeId,
         string memory recipeName,
         string memory description,
         string[] memory ingredientMeat,
-        string[] memory ingredientPart
+        string[] memory ingredientPart,
+        uint256[] memory ingredientWeight
+    ) external;
+
+    function setRecipeData(
+        uint256 tokenId,
+        string memory recipeName,
+        string memory description,
+        string[] memory ingredientMeat,
+        string[] memory ingredientPart,
+        uint256[] memory ingredientWeight
     ) external;
 
     function getRecipeData(
         uint256 recipeId
     ) external view returns (RecipeInfo memory);
 
-    function test() external pure returns (string memory);
 }

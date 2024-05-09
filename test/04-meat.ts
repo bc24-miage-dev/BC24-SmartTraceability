@@ -10,13 +10,22 @@ describe("BC24-Meat", function () {
   let breeder: any;
   let manufacturer: any;
   let contract: any;
-  let random: any;
   let animalId: any;
   let carcassId: any;
+  let transportId: any;
+
+  let animalContract: any;
+  let roleAccessContract: any;
+  let ownerAndCategoryMapperContract: any;
+  let transportContract: any;
+  let carcassContract: any;
+  let meatContract: any;
 
   let setupService: any;
 
   beforeEach(async function () {
+    /* This it the general setup needed for all the contracts*/
+    /* If a new contract is put into an interface it needs to be added likewise in the SetupService */
     setupService = new SetupService();
     await setupService.setup();
 
@@ -25,53 +34,97 @@ describe("BC24-Meat", function () {
     breeder = setupService.breeder;
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
-    random = setupService.random;
     manufacturer = setupService.manufacturer;
-    contract = setupService.contract;
+    animalContract = setupService.animalContract;
+    roleAccessContract = setupService.roleAccessContract;
+    ownerAndCategoryMapperContract =
+      setupService.ownerAndCategoryMapperContract;
+    transportContract = setupService.transportContract;
+    carcassContract = setupService.carcassContract;
+    meatContract = setupService.meatContract;
 
-    const transaction = await contract
+    const transaction = await animalContract
       .connect(breeder)
-      .createAnimal(breeder.address, "Cow", 10, "male");
-    animalId = transaction.value;
-    await contract
+      .createAnimalData("Cow", 10, "male");
+    const receipt = await transaction.wait();
+    animalId = receipt.logs[1].args[0];
+
+    /* Breeder --> Transporter */
+    await animalContract
       .connect(breeder)
-      .transferToken(animalId, transporter.address);
-    const slaugtherTransaction = await contract
+      .transferAnimal(animalId, transporter.address);
+
+    /* Transporter --> Slaughterer */
+    await animalContract
       .connect(transporter)
-      .transferToken(animalId, slaughterer.address);
-    carcassId = slaugtherTransaction.value;
-    await contract
+      .transferAnimal(animalId, slaughterer.address);
+
+    /* Kill Animal */
+    await animalContract.connect(slaughterer).killAnimal(animalId);
+
+    /* Create Carcass */
+    const transaction2 = await carcassContract
       .connect(slaughterer)
-      .transferToken(carcassId, transporter.address);
-    await contract
+      .createCarcassData(animalId);
+    const receipt2 = await transaction2.wait();
+    carcassId = receipt2.logs[1].args[0];
+
+    /* Carcass --> Transporter */
+    await carcassContract
+      .connect(slaughterer)
+      .transferCarcass(carcassId, transporter.address);
+
+    /* Transporter --> Manufacturer */
+    await carcassContract
       .connect(transporter)
-      .transferToken(carcassId, manufacturer.address);
+      .transferCarcass(carcassId, manufacturer.address);
   });
 
   it("Test contract", async function () {
-    expect(await contract.uri(0)).to.equal("");
-    expect(await contract.connect(manufacturer).ownerOf(carcassId)).to.equal(
-      manufacturer.address
-    );
+    expect(
+      await ownerAndCategoryMapperContract
+        .connect(manufacturer)
+        .getOwnerOfToken(carcassId)
+    ).to.equal(manufacturer.address);
   });
 
   it("should create a new MeatNFT which is connected to the carcass", async function () {
-    const transaction = await contract
+    const MeatTransaction = await meatContract
       .connect(manufacturer)
-      .createMeat(carcassId);
+      .createMeatData(carcassId, "MeatPartA", 100);
 
-    const meatId = transaction.value;
-    const cascass = await contract.connect(manufacturer).getMeat(meatId);
+    const receipt = await MeatTransaction.wait();
+    const meatId = receipt.logs[1].args[0];
 
-    expect(await cascass.carcassId).to.equal(carcassId);
+    const meat = await meatContract.connect(manufacturer).getMeatData(meatId);
+
+    expect(await meat.carcassId).to.equal(carcassId);
+    expect(await meat.part).to.equal("MeatPartA");
+    expect(await meat.weight).to.equal(100);
+  });
+
+  it("Test ownership after create", async function () {
+    const MeatTransaction = await meatContract
+      .connect(manufacturer)
+      .createMeatData(carcassId, "MeatPartA", 100);
+
+    const receipt = await MeatTransaction.wait();
+    const meatId = receipt.logs[1].args[0];
+
+    expect(
+      await ownerAndCategoryMapperContract
+        .connect(manufacturer)
+        .getOwnerOfToken(meatId)
+    ).to.equal(manufacturer.address);
   });
 
   it("update meat data", async function () {
-    const transaction = await contract
+    const MeatTransaction = await meatContract
       .connect(manufacturer)
-      .createMeat(carcassId);
+      .createMeatData(carcassId, "MeatPartA", 100);
 
-    const meatId = transaction.value;
+    const receipt = await MeatTransaction.wait();
+    const meatId = receipt.logs[1].args[0];
 
     const agreementNumber = "1111";
     const countryOfCutting = "Schweiz";
@@ -81,9 +134,9 @@ describe("BC24-Meat", function () {
     const weight = 100;
 
     await expect(
-      await contract
+      meatContract
         .connect(manufacturer)
-        .updateMeat(
+        .setMeatData(
           meatId,
           agreementNumber,
           countryOfCutting,
@@ -93,51 +146,12 @@ describe("BC24-Meat", function () {
           weight
         )
     )
-      .to.emit(contract, "MetaDataChanged")
+      .to.emit(meatContract, "MetaDataChanged")
       .withArgs(meatId, manufacturer.address, "Meat info changed.");
 
-    const meat = await contract.connect(manufacturer).getMeat(meatId);
+    const meat = await meatContract.connect(manufacturer).getMeatData(meatId);
     expect(meat.agreementNumber).to.equal(agreementNumber);
     expect(meat.countryOfCutting).to.equal(countryOfCutting);
     expect(meat.dateOfCutting).to.equal(dateOfCutting);
   });
-
-  it("create manufactured product", async function () {
-    const transaction = await contract
-      .connect(manufacturer)
-      .createMeat(carcassId);
-
-    const meatId = transaction.value;
-
-    const agreementNumber = 1;
-    const countryOfCutting = "Schweiz";
-    const dateOfCutting = 1622524800;
-    const part = "Tongue";
-    const isContaminated = false;
-    const weight = 100;
-
-    await expect(
-      await contract
-        .connect(manufacturer)
-        .updateMeat(
-          meatId,
-          agreementNumber,
-          countryOfCutting,
-          dateOfCutting,
-          part,
-          isContaminated,
-          weight
-        )
-    )
-      .to.emit(contract, "MetaDataChanged")
-      .withArgs(meatId, manufacturer.address, "Meat info changed.");
-
-    await expect(
-      await contract.connect(manufacturer).createManufacturedProduct(meatId)
-    )
-      .to.emit(contract, "NFTMinted")
-      .withArgs(1n, manufacturer.address, "ManufacturedProduct created");
-  });
-
- 
 });

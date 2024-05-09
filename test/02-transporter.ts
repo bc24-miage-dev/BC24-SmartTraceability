@@ -9,8 +9,14 @@ describe("BC24-Transporter", function () {
   let breeder: any;
   let transporter: any;
   let slaughterer: any;
-  let contract: any;
+
   let animalId: any;
+  let transportId: any;
+
+  let animalContract: any;
+  let roleAccessContract: any;
+  let ownerAndCategoryMapperContract: any;
+  let transportContract: any;
 
   let setupService: any;
 
@@ -24,22 +30,30 @@ describe("BC24-Transporter", function () {
     transporter = setupService.transporter;
     slaughterer = setupService.slaughterer;
     random = setupService.random;
-    contract = setupService.contract;
+    animalContract = setupService.animalContract;
+    roleAccessContract = setupService.roleAccessContract;
+    transportContract = setupService.transportContract;
+    ownerAndCategoryMapperContract =
+      setupService.ownerAndCategoryMapperContract;
 
-    const transaction = await contract
+    const animalCreation = await animalContract
       .connect(breeder)
-      .createAnimal(breeder.address, "Cow", 10, "male");
-    animalId = transaction.value;
-    await contract
+      .createAnimalData("Cow", 10, "male");
+
+    const animalCreationReceipt = await animalCreation.wait();
+    animalId = animalCreationReceipt.logs[1].args[0];
+
+    await animalContract
       .connect(breeder)
-      .transferToken(animalId, transporter.address);
+      .transferAnimal(animalId, transporter.address);
   });
 
   it("Test contract", async function () {
-    expect(await contract.uri(0)).to.equal("");
-    expect(await contract.connect(transporter).ownerOf(animalId)).to.equal(
-      transporter.address
-    );
+    expect(
+      await ownerAndCategoryMapperContract
+        .connect(transporter)
+        .getOwnerOfToken(animalId)
+    ).to.equal(transporter.address);
   });
 
   it("should allow the transporter to create transporter data after he received an animal", async function () {
@@ -48,23 +62,31 @@ describe("BC24-Transporter", function () {
     const humidity = 50;
     const isContaminated = false;
 
+    const transportCreation = await transportContract
+      .connect(transporter)
+      .createTransportData(animalId);
+
+    const transportCreationReceipt = await transportCreation.wait();
+    transportId = transportCreationReceipt.logs[1].args[0];
+
     await expect(
-      await contract
+      await transportContract
         .connect(transporter)
-        .updateTransport(
-          animalId,
+        .setTransportData(
+          transportId,
           duration,
           temperature,
           humidity,
           isContaminated
         )
     )
-      .to.emit(contract, "MetaDataChanged")
-      .withArgs(0n, transporter.address, "Transport info changed.");
+      .to.emit(transportContract, "MetaDataChanged")
+      .withArgs(transportId, transporter.address, "Transport data updated");
 
-    const transportData = await contract
+    const transportData = await transportContract
       .connect(transporter)
-      .getTransport(animalId);
+      .getTransportData(transportId);
+
     expect(transportData.duration).to.equal(duration);
     expect(transportData.temperature).to.equal(temperature);
     expect(transportData.humidity).to.equal(humidity);
@@ -82,9 +104,9 @@ describe("BC24-Transporter", function () {
     const isContaminated = false;
 
     await expect(
-      contract
+      animalContract
         .connect(transporter)
-        .updateAnimal(
+        .setAnimalData(
           animalId,
           placeOfOrigin,
           dateOfBirth,
@@ -99,47 +121,67 @@ describe("BC24-Transporter", function () {
   });
 
   it("should transfer animal to slaughterer", async function () {
-    await contract
-      .connect(transporter)
-      .transferToken(animalId, slaughterer.address);
-    expect(await contract.connect(slaughterer).ownerOf(animalId)).to.equal(
-      slaughterer.address
+    const balance = await animalContract.balanceOf(
+      transporter.address,
+      animalId
     );
+
+    //console.log(`Balance of token ${animalId} for wallet ${transporter.address}: ${balance}`);
+
+    await animalContract
+      .connect(transporter)
+      .transferAnimal(animalId, slaughterer.address);
+    expect(
+      await ownerAndCategoryMapperContract
+        .connect(slaughterer)
+        .getOwnerOfToken(animalId)
+    ).to.equal(slaughterer.address);
   });
 
-  it("should not allow transporter to change carcass", async function () {
-    await contract
+  it("should not allow to transfer Transport NFTs", async function () {
+    const transportCreation = await transportContract
       .connect(transporter)
-      .transferToken(animalId, slaughterer.address);
-    const transaction = await contract
-      .connect(slaughterer)
-      .slaughterAnimal(animalId);
-    const carcassId = transaction.value;
+      .createTransportData(animalId);
 
-    await contract
-      .connect(slaughterer)
-      .transferToken(carcassId, transporter.address);
-    expect(await contract.connect(transporter).ownerOf(carcassId)).to.equal(
-      transporter.address
-    );
+    const transportCreationReceipt = await transportCreation.wait();
+    transportId = transportCreationReceipt.logs[1].args[0];
 
-    const agreementNumber = "AG123";
-    const countryOfSlaughter = "Country";
-    const dateOfSlaughter = Math.floor(Date.now() / 1000);
-    const carcassWeight = 100;
+    await expect(
+      animalContract
+        .connect(transporter)
+        .transferAnimal(transportId, slaughterer.address)
+    ).to.be.revertedWith("Token is not an animal NFT");
+  });
+
+  it("should not allow transporter to change transport when it has been given away", async function () {
+    const transportCreation = await transportContract
+      .connect(transporter)
+      .createTransportData(animalId);
+
+    const transportCreationReceipt = await transportCreation.wait();
+    transportId = transportCreationReceipt.logs[1].args[0];
+
+    await animalContract
+      .connect(transporter)
+      .transferAnimal(animalId, slaughterer.address);
+
+    const duration = 1000;
+    const temperature = 25;
+    const humidity = 50;
     const isContaminated = false;
 
     await expect(
-      contract
+      transportContract
         .connect(transporter)
-        .updateCarcass(
-          carcassId,
-          agreementNumber,
-          countryOfSlaughter,
-          dateOfSlaughter,
-          carcassWeight,
+        .setTransportData(
+          transportId,
+          duration,
+          temperature,
+          humidity,
           isContaminated
         )
-    ).to.revertedWith("Caller is not a slaughterer");
+    ).to.be.revertedWith(
+      "Animal is not present or is not owned by the transporter"
+    );
   });
 });

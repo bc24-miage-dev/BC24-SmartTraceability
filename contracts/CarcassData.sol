@@ -7,7 +7,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "./interfaces/ICarcassData.sol";
-
+import "./interfaces/IRoleAccess.sol";
+import "./interfaces/IOwnerAndCategoryMapper.sol";
 
 contract CarcassData is
     Initializable,
@@ -17,30 +18,91 @@ contract CarcassData is
     UUPSUpgradeable,
     ICarcassData
 {
-    ///role
-    bytes32 public constant UPGRADER_ROLE = keccak256("UPGRADER_ROLE");
+    IRoleAccess private roleAccessInstance;
+    IOwnerAndCategoryMapper private ownerAndCategoryMapperInstance;
+
+    mapping(uint256 => ICarcassData.CarcassInfo) private _tokenCarcassData;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function initialize(address defaultAdmin) public initializer {
+    function initialize(
+        address defaultAdmin,
+        address roleAccessAddress,
+        address ownerAndCategoryMapperAddress
+    ) public initializer {
         __ERC1155_init("");
         __AccessControl_init();
         __ERC1155Burnable_init();
         __UUPSUpgradeable_init();
 
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
+        roleAccessInstance = IRoleAccess(roleAccessAddress);
+        ownerAndCategoryMapperInstance = IOwnerAndCategoryMapper(
+            ownerAndCategoryMapperAddress
+        );
     }
 
-    mapping(uint256 => ICarcassData.CarcassInfo) private _tokenCarcassData;
+    /* Event Emitters */
+    event NFTMinted(uint256 tokenId, address owner, string message);
+    event MetaDataChanged(uint256 tokenId, address owner, string message);
 
-    function createCarcassData(uint256 tokenId, uint256 animalId) external {
+    /* Access controllers */
+    modifier onlyCarcassNFT(uint256 tokenId) {
+        require(
+            ownerAndCategoryMapperInstance.getTokenCategoryType(tokenId) ==
+                CategoryTypes.Types.Carcass,
+            "Token is not an carcass NFT"
+        );
+        _;
+    }
+
+    modifier onlyTokenOwner(uint256 tokenId) {
+        require(
+            ownerAndCategoryMapperInstance.getOwnerOfToken(tokenId) ==
+                msg.sender,
+            "Caller is not the owner of the token"
+        );
+        _;
+    }
+
+    modifier onlyToTransporterORManufacturerReceiver(address receiver) {
+        require(
+            roleAccessInstance.onlyTransporterRole(receiver) ||
+                roleAccessInstance.onlyManufacturerRole(receiver),
+            "Receiver is neither a transporter nor a manufacturer"
+        );
+        _;
+    }
+
+    modifier onlySlaughterRole() {
+        require(
+            roleAccessInstance.onlySlaughterRole(msg.sender),
+            "Caller is not a slaughterer"
+        );
+        _;
+    }
+
+    function createCarcassData(
+        uint256 animalId
+    ) external onlySlaughterRole onlyTokenOwner(animalId) {
+        uint256 tokenId = ownerAndCategoryMapperInstance.getNextTokenId();
+        _mint(msg.sender, tokenId, 1, "");
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, msg.sender);
+        ownerAndCategoryMapperInstance.setTokenCategoryType(
+            tokenId,
+            CategoryTypes.Types.Carcass
+        );
+        ownerAndCategoryMapperInstance.setNextTokenId(tokenId + 1);
+
         CarcassInfo storage carcass = _tokenCarcassData[tokenId];
         carcass.timingInfo.creationDate = block.timestamp;
         carcass.animalId = animalId;
         carcass.category = "Carcass";
+
+        emit NFTMinted(tokenId, msg.sender, "CarcassNFT created");
     }
 
     function setCarcassData(
@@ -50,7 +112,12 @@ contract CarcassData is
         uint256 dateOfSlaughter,
         uint256 carcassWeight,
         bool isContaminated
-    ) external {
+    )
+        external
+        onlySlaughterRole
+        onlyCarcassNFT(tokenId)
+        onlyTokenOwner(tokenId)
+    {
         CarcassInfo storage carcass = _tokenCarcassData[tokenId];
         carcass.agreementNumber = agreementNumber;
         carcass.countryOfSlaughter = countryOfSlaughter;
@@ -58,6 +125,8 @@ contract CarcassData is
         carcass.carcassWeight = carcassWeight;
         carcass.isContaminated = isContaminated;
         carcass.timingInfo.lastUpdateDate = block.timestamp;
+
+        emit MetaDataChanged(tokenId, msg.sender, "Carcass info changed.");
     }
 
     function getCarcassData(
@@ -71,8 +140,21 @@ contract CarcassData is
         uint256 demiCarcassAWeight,
         uint256 demiCarcassBWeight,
         uint256 carcassId
-    ) external {
-        // needs more details
+    ) external onlyCarcassNFT(tokenId) onlyTokenOwner(tokenId) {
+        //
+    }
+
+    function transferCarcass(
+        uint256 tokenId,
+        address receiver
+    )
+        external
+        onlyCarcassNFT(tokenId)
+        onlyTokenOwner(tokenId)
+        onlyToTransporterORManufacturerReceiver(receiver)
+    {
+        safeTransferFrom(msg.sender, receiver, tokenId, 1, "");
+        ownerAndCategoryMapperInstance.setOwnerOfToken(tokenId, receiver);
     }
 
     function supportsInterface(
